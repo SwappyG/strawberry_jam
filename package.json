@@ -29,7 +29,8 @@
     "start": "node src/index.js"
   },
   "engines": {
-    "node": "16.x"
+    "node": "16.x",
+    "npm": "*"
   },
   "author": "Swapnil Patel",
   "license": "MIT"
