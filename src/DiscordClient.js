@@ -7,18 +7,20 @@ import { Constants, Client } from 'discord.js'
 const _DISCORD_PREFIX = "?"
 
 class DiscordClient {
-  constructor(args, prefix = _DISCORD_PREFIX) {
-    this.prefix = prefix
+  constructor({ discord_token_file_path, game_type, prefix }) {
+    this.prefix = prefix ?? _DISCORD_PREFIX
     this._client = new Client()
 
     this._client.on(Constants.Events.CLIENT_READY, this._on_discord_ready)
     this._client.on(Constants.Events.MESSAGE_CREATE, this._on_discord_message)
 
-    if (existsSync(args.discord_token_file_path)) {
+    if (existsSync(discord_token_file_path)) {
       console.log(`found discord token file, parsing and logging in`)
-      this._client.login(JSON.parse(readFileSync(args.discord_token_file_path)).discord_token)
+      this._is_running_on_heroku = false
+      this._client.login(JSON.parse(readFileSync(discord_token_file_path)).discord_token)
     } else if (process.env.DISCORD_TOKEN) {
       console.log(`found discord token env variable, logging in`)
+      this._is_running_on_heroku = true
       this._client.login(process.env.DISCORD_TOKEN)
     } else {
       throw new Error(`Failed to find discord token`)
@@ -26,6 +28,42 @@ class DiscordClient {
 
     this._users = []
     this._cmds = {}
+    this._is_idle = true
+    this._heroku_dyno_pinger = null
+
+    this._game_type = game_type
+    this._game = new this._game_type(this)
+  }
+
+  _start_game = () => {
+    console.log(`Starting a new instance of $${typeof this._game_type}`)
+    this._is_idle = false
+    this._game = new this._game_type(this)
+
+    this._heroku_dyno_pinger = setInterval(() => {
+      if (this._is_running_on_heroku) {
+        fetch("http://swappy-jam.herokuapp.com", { method: 'GET' })
+          .then(console.log(`successfully pinged heroku app`))
+          .catch(reason => {
+            this._end_game(`Can't contact server, got [${reason}], exiting`)
+          })
+      }
+      if (Date.now() - this._last_command_timestamp > 15 * 60 * 1000) {
+        this._end_game(`No msgs received in the last 15 minutes. Any active game will be ended`)
+      }
+    }, 15 * 60 * 1000)
+  }
+
+  _end_game = (reason) => {
+    if (reason) {
+      this.msg_everyone(reason)
+    }
+    this._cmds = {}
+    this._users = []
+    this._game = null
+    this._is_idle = true
+    clearInterval(this._heroku_dyno_pinger)
+    this._heroku_dyno_pinger = null
   }
 
   add_user = (user) => {
@@ -108,6 +146,12 @@ class DiscordClient {
       const trimmed_msg = msg.content.trim()
       if (trimmed_msg[0] != _DISCORD_PREFIX) {
         return
+      }
+
+      this._last_command_timestamp = Date.now()
+      if (this._is_idle) {
+        this._start_game()
+        msg.author.send(`I've awakened from my slumber`)
       }
 
       const args = minimist(parseArgsStringToArgv(trimmed_msg.slice(1)))

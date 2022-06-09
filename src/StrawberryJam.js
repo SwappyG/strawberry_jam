@@ -13,7 +13,7 @@ import { get_help_string } from './Help.js';
 import { char_array_to_int_array } from './String.js';
 
 export class StrawberryJam {
-	constructor(discord_client) {
+  constructor(discord_client) {
     this._discord_cli = discord_client
     this._add_commands(this._discord_cli)
     this._deck = new Deck()
@@ -22,7 +22,7 @@ export class StrawberryJam {
     this._options = {}
     this._state = STATE.IDLE
     this._players = new Players()
-    this._public_piles =  null
+    this._public_piles = null
     this._bonus_cards = new BonusCards()
     this._clues = null
   }
@@ -55,16 +55,16 @@ export class StrawberryJam {
         continue
       }
       const bonus_cards_index = index - 7
-      const letter = bonus_cards[bonus_cards_index] 
+      const letter = bonus_cards[bonus_cards_index]
       bonus_cards.splice(bonus_cards_index, 1)
       this._discord_cli.msg_everyone(`Bonus card ${letter} was consumed`)
     }
     return bonus_cards
-  } 
+  }
 
   _parse_hint_indices = (hint, player_index) => {
     const indices_chars = hint.toString().split(',')
-    
+
     const indices = char_array_to_int_array(indices_chars)
     if (indices === null) {
       return [false, `Indices list could not be parsed to integers`]
@@ -138,8 +138,8 @@ export class StrawberryJam {
       }
 
       const [success, ...ret] = this._players.add_player({
-        discord_id: msg.author.id, 
-        name: msg.author.username, 
+        discord_id: msg.author.id,
+        name: msg.author.username,
         length_of_words: this._options.length_of_words
       })
 
@@ -154,7 +154,7 @@ export class StrawberryJam {
     })
   }
 
-  _exit_game = async (msg, args) => { 
+  _exit_game = async (msg, args) => {
     await this.mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return this._discord_cli.log_and_reply(msg, `Cannot leave before game exists or after its already running`)
@@ -181,7 +181,7 @@ export class StrawberryJam {
     })
   }
 
-  _set_word = async (msg, args) => { 
+  _set_word = async (msg, args) => {
     await this.mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return this._discord_cli.log_and_reply(msg, `Cannot set word before game exists or after its already running`)
@@ -190,7 +190,7 @@ export class StrawberryJam {
       if (msg.channel.type !== 'dm') {
         return this._discord_cli.log_and_reply(msg, `Your secret word must be a DM! Choose a new word and DM it instead`)
       }
-      
+
       if (args["_"].length < 2) {
         return this._discord_cli.log_and_reply(msg, `You need to specify your word. Call help for syntax.`)
       }
@@ -219,7 +219,7 @@ export class StrawberryJam {
         return this._discord_cli.log_and_reply(msg, ret[0])
       }
       this._discord_cli.msg_everyone(ret[0])
-      
+
       this._public_piles = new PublicPiles(this._deck, this._players.num(), this._options)
       this._clues = new Clues(this._players.num())
       this._state = STATE.WAITING_FOR_HINT
@@ -235,7 +235,7 @@ export class StrawberryJam {
       if (![STATE.WAITING_FOR_HINT, STATE.DURING_HINT, STATE.FINAL_GUESS, STATE.SHOWING_RESULTS].includes(this._state)) {
         return this._discord_cli.log_and_reply(msg, `There is either no game, or it's still being created`)
       }
-  
+
       this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id, args.help))
     })
   }
@@ -245,7 +245,7 @@ export class StrawberryJam {
       if (this._state !== STATE.WAITING_FOR_HINT) {
         return this._discord_cli.log_and_reply(msg, `Cannot give a hint, either game hasn't started or another hint is in progress`)
       }
-      
+
       if (args["_"].length < 2) {
         return this._discord_cli.log_and_reply(msg, `You need to specify your hint. Call help for syntax.`)
       }
@@ -258,14 +258,14 @@ export class StrawberryJam {
       })
       if (!success) {
         return this._discord_cli.log_and_reply(msg, ret[0])
-      }      
+      }
       this._active_hint_indices = ret[0]
 
       for (const player of this._players.players()) {
         let ret = format_hint(player, this._players, this._public_piles, this._bonus_cards, this._active_hint_indices)
         if (player.id === msg.author.id) {
           this._discord_cli.log_and_reply(msg, `you just sent the hint: \`${ret}\``, true)
-        } else if (this._active_hint_indices.includes(player.num)){
+        } else if (this._active_hint_indices.includes(player.num)) {
           this._discord_cli.msg_user(player.id, `_ _\n\n${msg.author.username} sent you a new hint: \`${ret}\`\n`)
           player.receive_hint(ret)
         } else {
@@ -273,7 +273,7 @@ export class StrawberryJam {
         }
         this._discord_cli.msg_user(player.id, this._format_board(player.id))
       }
-      this._clues.decrement() 
+      this._clues.decrement()
       this._state = STATE.DURING_HINT
 
       if (this._players.all_players_done_responding_to_hint()) {
@@ -292,7 +292,7 @@ export class StrawberryJam {
         return [true, player.format_received_hints()]
       })
       if (!success) {
-        this._discord_cli.log_and_reply(msg, ret[0])  
+        this._discord_cli.log_and_reply(msg, ret[0])
       }
       this._discord_cli.msg_user(msg.author.id, `_ _\n\nYou've received the following hints.${ret[0]}`)
     })
@@ -305,11 +305,11 @@ export class StrawberryJam {
       this._clues.increment()
       this._discord_cli.msg_everyone(`Pile \`< ${p} >\` has been depleted, a new clue token was unlocked`)
     }
-    this._bonus_cards.update(this._active_hint_indices)    
+    this._bonus_cards.update(this._active_hint_indices)
     this._clues.update(this._players.get_player_clues_given())
     this._players.end_round()
-    
-    this._active_hint_indices = []  
+
+    this._active_hint_indices = []
 
     this._discord_cli.msg_everyone(`The current hint is over. Anyone can now give the next hint`)
     for (const p of this._players.players()) {
@@ -328,7 +328,7 @@ export class StrawberryJam {
       if (this._state !== STATE.DURING_HINT) {
         return this._discord_cli.log_and_reply(msg, `Cannot end hint while no hint is in progress`)
       }
-      
+
       if (args["_"].length < 2) {
         return this._discord_cli.log_and_reply(msg, `You need to enter a character for your guess for this index. Call help for syntax.`)
       }
@@ -339,7 +339,7 @@ export class StrawberryJam {
       })
       if (!success) {
         return this._discord_cli.log_and_reply(msg, ret[0])
-      } 
+      }
 
       this._discord_cli.msg_everyone(ret[0])
       if (ret[1].length > 0) {
@@ -365,7 +365,7 @@ export class StrawberryJam {
       if (!success) {
         return this._discord_cli.log_and_reply(msg, ret[0])
       }
-      
+
       this._discord_cli.msg_everyone(ret[0])
       this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
       if (this._players.all_players_done_responding_to_hint()) {
@@ -379,7 +379,7 @@ export class StrawberryJam {
       if (this._state !== STATE.DURING_HINT) {
         return this._discord_cli.log_and_reply(msg, `Cannot guess bonus letter when no hint is in progress`)
       }
-      
+
       if (args["_"].length < 2) {
         return this._discord_cli.log_and_reply(msg, `You need to specify the letter to guess`)
       }
@@ -409,7 +409,7 @@ export class StrawberryJam {
       if (this._state !== STATE.FINAL_GUESS) {
         return this._discord_cli.log_and_reply(msg, `Can't make final guess until all clues have been used`)
       }
-      
+
       if (args["_"].length < 2) {
         return this._discord_cli.log_and_reply(msg, `You need to specify the indices for your final guess. Call help for syntax.`)
       }
@@ -429,7 +429,7 @@ export class StrawberryJam {
       }
       this._discord_cli.msg_everyone(ret[2])
       this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
-      
+
       if (this._players.all_players_have_final_guess()) {
         this._state = STATE.SHOWING_RESULTS
         this._discord_cli.msg_everyone(`All players made their final guess. Showing results`)
@@ -546,7 +546,7 @@ export class StrawberryJam {
         if (!isNaN(ii) && (ii > 6) && ((ii - 7) < this._bonus_cards.length)) {
           this._bonus_cards.remove_by_index(this._deck, ii)
         } else {
-          this._discord_cli.log_and_reply(msg, `Index for bonus cards is too large`) 
+          this._discord_cli.log_and_reply(msg, `Index for bonus cards is too large`)
         }
       }
 

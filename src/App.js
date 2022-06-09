@@ -15,7 +15,10 @@ const App = () => {
   app.get('/', (req, res) => res.send(`SwappyJam Discord Bot`))
   app.listen(port, () => console.log(`Listening on ${port}`))
 
-  const letter_jam = new StrawberryJam(new DiscordClient(args))
+  const letter_jam = new DiscordClient({
+    discord_token_file_path: 'keys/discord_token.json',
+    game_type: StrawberryJam
+  })
 }
 
 export {
