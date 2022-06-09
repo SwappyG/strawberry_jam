@@ -25,6 +25,7 @@ const _FULL_DECK = [
 class Deck {
   constructor (cards = null) {
     this._cards = cards ?? _FULL_DECK.slice()
+    this._discard = []
   }
 
   cards = () => {
@@ -40,13 +41,21 @@ class Deck {
     return new Deck(this._cards.slice())
   }
 
+  discard = (cards) => {
+    if (!Array.isArray(cards)) {
+      cards = [cards]
+    }
+    this._discard.concat(cards)
+  }
+
   return_cards = (cards) => {
     this._cards = this._cards.concat(cards.split(""))
   }
 
   draw_cards = (num) => {
     if (num > this._cards.length - 1) {
-      return null
+      this._cards = this._discard
+      this._discard = []
     }
   
     let popped_cards = []

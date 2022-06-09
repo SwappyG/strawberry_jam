@@ -453,11 +453,11 @@ export class StrawberryJam {
         return this._end_round()
       }
       if (args.deck) {
-        this._discord_cli.log_and_reply(msg, `_ _\n\n\`${this._deck.cards()}\`\n\nNum cards: ${this._deck.cards().length}`)
+        console.log(this._deck)
       }
 
       if (args.player) {
-        for (const p of this._players) {
+        for (const p of this._players.players()) {
           console.log(p)
         }
       }
@@ -468,6 +468,10 @@ export class StrawberryJam {
 
       if (args.options) {
         console.log(this._options)
+      }
+
+      if (args.consume_hints) {
+        this._clues.decrement(args.consume_hints)
       }
     })
   }

@@ -19,16 +19,17 @@ export class PublicPiles {
   }
 
   update = (deck, hint_indices, num_players) => {
-    const unique_hint_indices = [...new Set(hint_indices)]
+    const unique_public_pile_indices = [...new Set(hint_indices)].filter(h => h > num_players && h < 7)
     let depleted_piles = []
-    for (const hint_index of unique_hint_indices) {
-      const ii = hint_index - num_players - 1 
+    for (const public_pile_index of unique_public_pile_indices) {
+      const ii = public_pile_index - num_players - 1
+      deck.discard(this._piles[ii][0])
       this._piles[ii].splice(0, 1)
       
       if (this._piles[ii].length === 0) {
         if (this._clues[ii]) {
           this._clues[ii] = 0
-          depleted_piles.push(hint_index)
+          depleted_piles.push(public_pile_index)
         } 
         this._piles[ii] = deck.draw_cards(1)
         console.log(this._piles[ii])
