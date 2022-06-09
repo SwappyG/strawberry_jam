@@ -13,12 +13,12 @@ export class Clues {
     }
   }
 
-  increment = () => {
-    this._remaining = this._remaining + 1
+  increment = (amount = 1) => {
+    this._remaining = this._remaining + amount
   }
 
-  decrement = () => {
-    this._remaining = this._remaining - 1
+  decrement = (amount = 1) => {
+    this._remaining = Math.max(0, this._remaining - amount)
   }
 
   has_remaining = () => {
