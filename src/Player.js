@@ -1,5 +1,6 @@
 import { PLAYER_STATE } from "./PlayerState.js"
 import { is_letters, shuffle_string } from "./String.js"
+import { array_last } from "./ArrayUtils.js"
 
 export class Player {
   constructor({discord_id, name, length_of_words}) {
@@ -16,6 +17,7 @@ export class Player {
 
     this.on_bonus_letter = false
     this.bonus_letter = null
+    this.bonus_hint = null
 
     this.hints_given = 0
     this.hints_received = []
@@ -82,7 +84,20 @@ export class Player {
   }
 
   get_active_letter = () => {
-    return this.on_bonus_letter ? this.bonus_letter : this.assign_word[this.letter_index]
+    // console.log(this.assigned_word[this.letter_index])
+    return this.on_bonus_letter ? this.bonus_letter : this.assigned_word[this.letter_index]
+  }
+
+  get_active_hint = () => {
+    if (!this.is_responding_to_hint()) {
+      return null
+    }
+
+    if (this.on_bonus_letter) {
+      return this.bonus_hint
+    } else {
+      return array_last(this.hints_received[this.letter_index])
+    }
   }
 
   assign_word = (word, player_num) => {
@@ -118,7 +133,9 @@ export class Player {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. A player is receiving a hint while not in READY state`)
     }
     this.state = PLAYER_STATE.RESPONDING_TO_HINT
-    if (!this.on_bonus_letter) {
+    if (this.on_bonus_letter) {
+      this.bonus_hint = hint
+    } else {
       this.hints_received[this.letter_index].push(hint)
     }
   }
@@ -189,41 +206,80 @@ export class Player {
       return [false, `Your bonus letter guess must be a single valid letter`]
     }
     
+    // regardless of correct guess or not, we change bonus letters
+    const bonus_letter = this.bonus_letter
+    deck.discard(this.bonus_letter)
+    this.bonus_letter = deck.draw_cards(1)[0]
+    this.bonus_hint = null
+
     this.state = PLAYER_STATE.READY
-    if (letter.toLowerCase() === this.bonus_letter) {
-      this.bonus_letter = deck.draw_cards(1)[0]
+    
+    if (letter.toLowerCase() === bonus_letter) {
       return [true, true, `${this.name} guessed their bonus letter!`]
     } else {
       return [true, false, `${this.name}'s bonus letter guess was incorrect`]
     }
-  }
+  } 
 
-  make_final_guess = (indices_str) => {
+  make_final_guess = (indices_str, bonus_cards) => {
     if (!this.is_ready()) {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. ${this.name} tried to make a final guess while not READY`)
     }
 
-    const indices = indices_str.toString().split(',')
-    if (indices.length !== this.length_of_words) {
-      return [false, `Your guess must be at equal in length to your assigned word, \`${this.length_of_words}\` letters`]
+    const entries = indices_str.toString().split(',')
+    if (entries.length < this.length_of_words) {
+      return [false, `Your guess must be at equal to or larger than your assigned word, (ie, \`${this.length_of_words}\` letters or more)`]
     }
 
-    if (indices.length !== [...new Set(indices)].length) {
+    if (entries.length !== [...new Set(entries)].length) {
       return [false, `You can't have duplicate indices when reshuffling your final guess`]
     }
 
+    const non_bonus_indices = entries.filter(e => e[0] !== 'b')
+    if (entries.includes(0) && (non_bonus_indices.length === this.length_of_words)) {
+      return [false, `If you use a wild card \`[*]\`, then it must *replace* one of your original letters`]
+    }
+
     let guess = []
-    for (let index of indices) {
-      index = parseInt(index)
+    let bonus_cards_used = []
+    let wild_used = false
+    
+    console.log(entries)
+    for (let entry of entries) {
+      console.log(entry)
+      const is_bonus_index = entry[0].toLowerCase() === 'b' 
+      console.log(`is_bonus_index: ${is_bonus_index}`)
+      const index = parseInt(is_bonus_index ? entry.slice(1) : entry)
+      console.log(`index: ${index}`)
       if (isNaN(index)) {
-        return [false, `You're indices must be integers`]
+        return [false, `Your indices must be integers`]
       }
-      if (index < 0 || index > this.length_of_words) {
-        return [false, `You're indices must be within 1 and length of your word, \`${this.length_of_words}\``]
+      if (index < 0) {
+        return [false, `Your indices cannot be negative`]
       }
-      guess.push(this.assigned_word[index-1])
+      if (!is_bonus_index && (index > this.length_of_words)) {
+        return [false, `Your non-bonus indices cannot be greater than the number of letters you were assigned`]
+      }
+      
+      if (index === 0) {
+        const [success, ...ret] = bonus_cards.use_wild()
+        if (!success) {
+          return [false, ret[0]]
+        }
+        guess.push('*')
+        wild_used = true
+      } else if (is_bonus_index) {
+        const [success, ...ret] = bonus_cards.use(index - 7)
+        if (!success) {
+          return [false, ret[0]]
+        }
+        guess.push(ret[0])
+        bonus_cards_used.push[ret[0]]
+      } else {
+        guess.push(this.assigned_word[index-1])
+      }
     }
     this.final_guess = guess.join('')
-    return [true, `${this.name} made their final guess`]
+    return [true, wild_used, bonus_cards_used, `${this.name} made their final guess`]
   }
 }

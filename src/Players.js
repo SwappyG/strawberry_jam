@@ -14,7 +14,7 @@ export class Players {
     return this._players.findIndex(p => p.id === id)
   }
 
-  get_player = () => {
+  get_player = (id) => {
     return this._players.find(p => p.id === id)
   }
 
@@ -136,29 +136,31 @@ export class Players {
 
   format_player_states = () => {
     const len_names = this.get_max_char_of_names() + 4
-    let ret = `_ _\n\nPlayers in the game:\n`
+    let ret = `_ _\n\nGame Lobby\n\`\`\``
     for (const player of this._players) {
       const name = player.name + ' '.repeat(len_names - player.name.length)
       const num = `< ${player.num !== null ? player.num : '?'} >`
       const clues = format_clue_tokens(player.hints_given)
       const state = `${player.state}`
 
-      ret = `${ret}\n\` - ${num} ${name} / ${clues} / ${state}\``
+      ret = `${ret}\n${num} ${name} / ${clues} / ${state}`
     }
-    return `${ret}`
+    return `${ret}\`\`\``
   }
 
   format_player_cards = (player, is_hidden = false) => {
     const word_len = player.assigned_word.length
-    if (player.letter_index !== null) {
-      let ret = ('[ ]'.repeat(word_len)).split('')
+
+    let main_cards = ('[ ]'.repeat(word_len)).split('')
+    let bonus_card = `/    `
+    if (player.on_bonus_letter) {
+      bonus_card = is_hidden ? '/ [?]' : `/ [${player.bonus_letter.toUpperCase()}]`
+    } else {
       const active_letter = player.assigned_word[player.letter_index]
       const active_letter_index = (player.letter_index + 1) * 3 - 2
-      ret[active_letter_index] = is_hidden ? '?' : active_letter.toUpperCase() 
-      return ret.join('')
-    } else {
-      return `${'[ ]'.repeat(word_len)} / [${is_hidden ? '?' : player.bonus_letter.toUpperCase()}]`
+      main_cards[active_letter_index] = is_hidden ? '?' : active_letter.toUpperCase() 
     }
+    return `${main_cards.join('')} ${bonus_card}`
   }
 
   format_for_board = (id) => {
@@ -171,7 +173,7 @@ export class Players {
       const clues = format_clue_tokens(player.hints_given)
       const state = `${player.state}`
 
-      ret = `${ret}${ii == 0 ? "" : "\n"}${num} ${name} ${cards}     / ${clues} / ${state}`
+      ret = `${ret}${ii === 0 ? "" : "\n"}${num} ${name} ${cards} // ${clues} / ${state}`
     }
     return `${ret}`
   }
