@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex'
 
 import { STATE } from './State.js'
+
 import { Deck } from './Deck.js';
 import { Players } from './Players.js';
 import { BonusCards } from './BonusCards.js'
@@ -43,6 +44,7 @@ export class StrawberryJam {
     cli.add_command(["guess", "g"], this._guess_letter)
     cli.add_command(["final", "f"], this._final_guess)
     cli.add_command(["results", "r"], this._show_results)
+    cli.add_command(["vote", "V"], this._vote_for_score)
     cli.add_command(["_debug", "_d"], this._debug)
   }
 
@@ -441,6 +443,24 @@ export class StrawberryJam {
       }
 
       return this._discord_cli.log_and_reply(msg, this._players.format_results())
+    })
+  }
+
+  _vote_for_score = async (msg, args) => {
+    await this.mutex.runExclusive(() => {
+      if (this._state !== STATE.SHOWING_RESULTS) {
+        return this._discord_cli.log_and_reply(msg, `Can't vote for score until the end of the game`)
+      }
+
+      if (args["_"].length < 2) {
+        return this._discord_cli.log_and_reply(msg, `You need to specify the player indices for your vote. Call help for syntax.`)
+      }
+      const votes = args["_"][1]
+      const [success, ...ret] = this._players.add_votes(msg.author.id, votes)
+      if (!success) {
+        return this._discord_cli.log_and_reply(msg, ret[0])
+      }
+      this._discord_cli.msg_everyone(ret[0])
     })
   }
 

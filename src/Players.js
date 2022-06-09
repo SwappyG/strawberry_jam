@@ -1,5 +1,6 @@
 import { Player } from "./Player.js"
 import { format_clue_tokens } from "./FormatOutput.js"
+import { format_score_breakdown } from "./Score.js"
 
 export class Players {
   constructor () {
@@ -163,6 +164,31 @@ export class Players {
     return `${main_cards.join('')} ${bonus_card}`
   }
 
+  add_votes = (voter_id, votes) => {
+    let player = this.get_player(voter_id)
+    if (player === null) {
+      return [false, `You can't vote if you're not in the game`]
+    }
+
+    const vote_indices = votes.toString().split(',')
+    if (vote_indices.length !== [...new Set(vote_indices)].length) {
+      return [false, `You can't have duplicate indices when for your votes`]
+    }
+
+    const votes_int = vote_indices.map(v => parseInt(v))
+    if (votes_int.some(v => isNaN(v))) {
+      return [false, `Your votes must be integers`]
+    }
+
+    if (votes_int.some(v => v < 1 || v > this.num())) {
+      return [false, `Your indices must correspond to player nums, ie they must be between \`1\` and \`${this.num()}\``]
+    }
+    
+    player.votes = votes_int
+    const names = votes_int.map(num => this._players.find(p => p.num === num).name)
+    return [true, `${player.name} believes [${names.join(', ')}] have proper words`]
+  }
+
   format_for_board = (id) => {
     const len_names = this.get_max_char_of_names() + 4
     let ret = ''
@@ -179,11 +205,39 @@ export class Players {
   }
 
   format_results = () => {
-    let ret = '\nFinal Results'
-    for (const player of this._players) {
-      ret = `${ret}\n${player.name}\t[${player.assigned_word_unshuffled}]\t[${player.assigned_word}]\tGuess: [${player.final_guess}]`
-    }
-    return ret
-  }
+    let ret = ''
 
+    const len_names = this.get_max_char_of_names() + 4
+    let correct_words = 0
+    let bonus_letters = 0
+    for (const player of this._players) {
+      const index = `< ${player.num} >`
+      const name = `${player.name}`
+      const name_spacer = `${' '.repeat(len_names - name.length)}`
+      const unshuffled = `[${player.assigned_word_unshuffled}]`
+      const assigned = `[${player.assigned_word}]`
+      const guess = `[${player.final_guess}]`
+      const voted = player.votes !== null ? "VOTED" : "NO_VOTE"
+      const votes = this._players.reduce((accum, p) => {
+        return accum + ((p.votes === null) ? 0 : p.votes.includes(player.num))
+      }, 0)
+      const vote_fraction = `(${(votes / this.num() * 100).toFixed(1)}%)`
+
+      console.log(`player: ${player.name}`)
+      console.log(`votes: ${votes}`)
+      console.log(`voted: ${voted}`)
+      if (votes / this.num() > 0.5) {
+        correct_words = correct_words + 1
+        bonus_letters = bonus_letters + player.final_guess.length - player.length_of_words
+      }
+      ret = `${ret}\n${index} ${name}${name_spacer}${unshuffled} ${assigned} / ${guess} / ${vote_fraction} / ${voted}`
+    }
+
+    console.log(`correct_words: ${correct_words}`)
+    console.log(`bonus_letters: ${bonus_letters}`)
+    const score = correct_words * this._players[0].length_of_words * 3 + bonus_letters * 1
+    const score_chart = format_score_breakdown(this.num())
+
+    return `_ _\n\nFinal Results\n\n\`\`\`Score: ${score}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
+  }
 }

@@ -42,8 +42,13 @@ const final_guess_msg = (prefix) => {
 const results_msg = (prefix) => {
   return ` - \`${prefix}results\` or \`${prefix}r\` to see the results.`
 }
+
 const end_msg = (prefix) => {
   return ` - \`${prefix}end\` or \`${prefix}e\` to end the game`
+}
+
+const vote_msg = (prefix) => {
+  return ` - \`${prefix}vote <player_indices>\` or \`${prefix}V <player_indices>\` to vote for correct answers`
 }
 
 const help_idle = (prefix) => {
@@ -106,7 +111,7 @@ const help_final_guess = (prefix, player) => {
 
 const help_show_results = (prefix) => {
   const main_msg = `_ _\n\nThe game is over.`
-  return `${main_msg}\n${results_msg(prefix)}\n${end_msg(prefix)}`
+  return `${main_msg}\n${results_msg(prefix)}\n${vote_msg(prefix)}\n${end_msg(prefix)}`
 }
 
 export const get_help_string = (state, prefix, player) => {
