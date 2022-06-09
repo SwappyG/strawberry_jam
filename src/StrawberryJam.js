@@ -429,9 +429,12 @@ export class StrawberryJam {
       }
       this._discord_cli.msg_everyone(ret[2])
       this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
+      
       if (this._players.all_players_have_final_guess()) {
         this._state = STATE.SHOWING_RESULTS
+        this._discord_cli.msg_everyone(`All players made their final guess. Showing results`)
         this._discord_cli.msg_everyone(this._players.format_results())
+        this._discord_cli.msg_everyone(`You can now vote for which words you think are spelled correctly`)
       }
     })
   }
@@ -461,6 +464,7 @@ export class StrawberryJam {
         return this._discord_cli.log_and_reply(msg, ret[0])
       }
       this._discord_cli.msg_everyone(ret[0])
+      this._discord_cli.msg_everyone(this._players.format_results())
     })
   }
 
@@ -480,26 +484,76 @@ export class StrawberryJam {
 
         return this._end_round()
       }
-      if (args.deck) {
-        console.log(this._deck)
+      if (args.state) {
+        this._discord_cli.log_and_reply(msg, `\`\`\`State: ${this._state}\`\`\``)
       }
 
-      if (args.player) {
+      if (args.add_hints) {
+        this._clues.increment(parseInt(args.add_hints))
+        this._discord_cli.log_and_reply(msg, `Added ${args.add_hints} clue to "remaining clues" pile`)
+      }
+
+      if (args.shuffle_deck) {
+        this._deck._cards.concat(this._deck._discard)
+        this._discord_cli.log_and_reply(msg, `Shuffled discard pile into deck.\n\`\`\`${JSON.stringify(this._deck, null, 2)}\`\`\``)
+      }
+
+      if (args.discard_cards) {
+        this._deck.discard(this._deck.draw_cards(parseInt(args.discard_cards)))
+        this._discord_cli.log_and_reply(msg, `Discarded ${args.discard_cards} cards from the deck`)
+      }
+
+      if (args.deck) {
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this._deck)}\`\`\``)
+      }
+
+      if (args.players) {
         for (const p of this._players.players()) {
-          console.log(p)
+          this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(p, null, 2)}\`\`\``)
         }
       }
 
+      if (args.everything) {
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this, null, 2)}\`\`\``)
+      }
+
       if (args.public) {
-        console.log(this._public_piles)
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this._public_piles, null, 2)}\`\`\``)
       }
 
       if (args.options) {
-        console.log(this._options)
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this._options, null, 2)}\`\`\``)
+      }
+
+      if (args.clues) {
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this._clues, null, 2)}\`\`\``)
+      }
+
+      if (args.bonus) {
+        this._discord_cli.log_and_reply(msg, `\`\`\`${JSON.stringify(this._bonus_cards, null, 2)}\`\`\``)
       }
 
       if (args.consume_hints) {
-        this._clues.decrement(args.consume_hints)
+        this._clues.decrement(parseInt(args.consume_hints))
+      }
+
+      if (args.add_bonus) {
+        this._bonus_cards.add(this._deck.draw_cards(1)[0])
+      }
+
+      if (args.remove_bonus) {
+        const ii = parseInt(args.remove_bonus)
+        if (!isNaN(ii) && (ii > 6) && ((ii - 7) < this._bonus_cards.length)) {
+          this._bonus_cards.remove_by_index(this._deck, ii)
+        } else {
+          this._discord_cli.log_and_reply(msg, `Index for bonus cards is too large`) 
+        }
+      }
+
+      if (args.unlock_clues) {
+        this._clues._remaining = this._clues._remaining + this._clues._locked
+        this._clues._locked = 0
+        this._discord_cli.log_and_reply(msg, `Force unlocked clues`)
       }
     })
   }

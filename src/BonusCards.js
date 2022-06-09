@@ -11,6 +11,15 @@ export class BonusCards {
     this._used.push(false)
   }
 
+  remove_by_index = (deck, index) => {
+    if (index >= this._cards.length) {
+      throw new Error('asked to remove bonus card great that number of cards')
+    }
+    deck.discard(this._cards[index])
+    this._cards.splice(index, 1)
+    this._used.splice(index, 1)
+  }
+
   use = (index) => {
     if (index > this._used.length) {
       return [false, `Tried to use bonus card out of bounds. index ${index} > ${this._used.length}`]
@@ -75,9 +84,7 @@ export class BonusCards {
     for (const bonus_card_index of unique_bonus_cards_indices) {
       const ii = bonus_card_index - 7
       consumed_letters.push(this._cards[ii])
-      deck.discard(this._cards[ii])
-      this._cards.splice(ii, 1)
-      this._used.splice(ii, 1)
+      this.remove_by_index(ii)
     }
     return [true, consumed_letters]
   }
