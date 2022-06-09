@@ -7,7 +7,7 @@ const join_msg = (prefix) => {
    return ` - \`${prefix}join\` or \`${prefix}j\` to join the game.`
 }
 const word_msg = (prefix) => {
-  return ` - \`${prefix}set_word <your_word>\` or \`${prefix}w <your word>\` to set/change your secret word`
+  return ` - \`${prefix}word <your_word>\` or \`${prefix}w <your_word>\` to set/change your secret word`
 }
 const leave_msg = (prefix) => {
   return ` - \`${prefix}exit\` or \`${prefix}x\` to leave the lobby`

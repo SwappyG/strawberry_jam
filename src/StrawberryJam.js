@@ -3,9 +3,11 @@ import { Mutex } from 'async-mutex'
 import { STATE } from './State.js'
 import { Deck } from './Deck.js';
 import { Players } from './Players.js';
-import { format_hint, format_board } from './FormatOutput.js'
+import { BonusCards } from './BonusCards.js'
 import { PublicPiles } from './PublicPiles.js';
 import { Clues } from './Clues.js';
+
+import { format_hint, format_board } from './FormatOutput.js'
 import { get_help_string } from './Help.js';
 import { char_array_to_int_array } from './String.js';
 
@@ -20,7 +22,7 @@ export class StrawberryJam {
     this._state = STATE.IDLE
     this._players = new Players()
     this._public_piles =  null
-    this._bonus_cards = []
+    this._bonus_cards = new BonusCards()
     this._clues = null
   }
 
@@ -31,7 +33,7 @@ export class StrawberryJam {
     cli.add_command(["join", "j"], this._join_game)
     cli.add_command(["exit", "x"], this._exit_game)
     cli.add_command(["lobby", "l"], this._view_lobby)
-    cli.add_command(["set_word", "w"], this._set_word)
+    cli.add_command(["word", "w"], this._set_word)
     cli.add_command(["start", "s"], this._start_game)
     cli.add_command(["board", "b"], this._show_board)
     cli.add_command(["clue", "c"], this._give_clue)
@@ -66,8 +68,8 @@ export class StrawberryJam {
       return [false, `Indices list could not be parsed to integers`]
     }
 
-    if (indices.some(ii => ii < 0 || ii > 6 + this._bonus_cards.length)) {
-      return [false, `Indices list contains numbers less than \`0\` or greater than piles in board (\`${6 + this._bonus_cards.length}\`)`]
+    if (indices.some(ii => ii < 0 || ii > 6 + this._bonus_cards.num())) {
+      return [false, `Indices list contains numbers less than \`0\` or greater than piles in board (\`${6 + this._bonus_cards.num()}\`)`]
     }
 
     if (indices.includes(player_index)) {
@@ -79,8 +81,8 @@ export class StrawberryJam {
     return [true, indices]
   }
 
-  _format_board = (messenger_id) => {
-    return format_board(this._players, this._public_piles, this._bonus_cards, this._clues, messenger_id)
+  _format_board = (messenger_id, help = false) => {
+    return format_board(this._players, this._public_piles, this._bonus_cards, this._clues, messenger_id, help)
   }
 
   _new_game = async (msg, args) => {
@@ -104,7 +106,7 @@ export class StrawberryJam {
       }
       this._players = new Players()
       this._public_piles = null
-      this._bonus_cards = []
+      this._bonus_cards = new BonusCards()
       this._deck = new Deck()
       this._state = STATE.CREATING_GAME
       this._clues = null
@@ -221,7 +223,7 @@ export class StrawberryJam {
       this._state = STATE.WAITING_FOR_HINT
 
       for (const player of this._players.players()) {
-        this._discord_cli.msg_user(player.id, '\`' + this._format_board(player.id) + '\`')
+        this._discord_cli.msg_user(player.id, this._format_board(player.id))
       }
     })
   }
@@ -232,7 +234,7 @@ export class StrawberryJam {
         return this._discord_cli.log_and_reply(msg, `There is either no game, or it's still being created`)
       }
   
-      this._discord_cli.msg_user(msg.author.id, `\`${this._format_board(msg.author.id)}\``)
+      this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id, args.help))
     })
   }
 
@@ -267,7 +269,7 @@ export class StrawberryJam {
         } else {
           this._discord_cli.msg_user(player.id, `_ _\n\n${msg.author.username} sent a hint, but you're not part of it: \`${ret}\`\n`)
         }
-        this._discord_cli.msg_user(player.id, `\`${this._format_board(player.id)}\``)
+        this._discord_cli.msg_user(player.id, this._format_board(player.id))
       }
       this._clues.decrement() 
       this._state = STATE.DURING_HINT
@@ -301,7 +303,7 @@ export class StrawberryJam {
       this._clues.increment()
       this._discord_cli.msg_everyone(`Pile \`< ${p} >\` has been depleted, a new clue token was unlocked`)
     }
-    this._bonus_cards = this._removed_used_bonus_cards(this._bonus_cards.slice(), this._active_hint_indices)    
+    this._bonus_cards.update(this._active_hint_indices)    
     this._clues.update(this._players.get_player_clues_given())
     this._players.end_round()
     
@@ -309,7 +311,7 @@ export class StrawberryJam {
 
     this._discord_cli.msg_everyone(`The current hint is over. Anyone can now give the next hint`)
     for (const p of this._players.players()) {
-      this._discord_cli.msg_user(p.id, `\`${this._format_board(p.id)}\``)
+      this._discord_cli.msg_user(p.id, this._format_board(p.id))
     }
     if (!this._clues.has_remaining()) {
       this._discord_cli.msg_everyone(`There are no more hints remaining. Everyone should now guess their word`)
@@ -342,7 +344,7 @@ export class StrawberryJam {
         this._discord_cli.log_and_reply(msg, ret[1])
       }
 
-      this._discord_cli.msg_user(msg.author.id, `\`${this._format_board(msg.author.id)}\``)
+      this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
       if (this._players.all_players_done_responding_to_hint()) {
         this._end_round()
       }
@@ -363,7 +365,7 @@ export class StrawberryJam {
       }
       
       this._discord_cli.msg_everyone(ret[0])
-      this._discord_cli.msg_user(msg.author.id, `\`${this._format_board(msg.author.id)}\``)
+      this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
       if (this._players.all_players_done_responding_to_hint()) {
         this._end_round()
       }
@@ -390,10 +392,10 @@ export class StrawberryJam {
 
       this._discord_cli.msg_everyone(ret[1])
       if (ret[0]) {
-        this._bonus_cards.push(letter.toLowerCase())
-      } 
+        this._bonus_cards.add(letter.toLowerCase())
+      }
 
-      this._discord_cli.msg_user(msg.author.id, `\`${this._format_board(msg.author.id)}\``)
+      this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
       if (this._players.all_players_done_responding_to_hint()) {
         this._end_round()
       }
@@ -411,17 +413,23 @@ export class StrawberryJam {
       }
       const indices = args["_"][1]
       const [success, ...ret] = this._players.apply_to_player(msg.author.id, (player) => {
-        return player.make_final_guess(indices)
+        return player.make_final_guess(indices, this._bonus_cards)
       })
       if (!success) {
         return this._discord_cli.log_and_reply(msg, ret[0])
       }
 
-      this._discord_cli.msg_everyone(ret[0])
-      this._discord_cli.msg_user(msg.author.id, `\`${this._format_board(msg.author.id)}\``)
+      if (ret[0]) {
+        this._discord_cli.msg_everyone(`${msg.author.username} just used the wild card \`[*]\` in their final guess`)
+      }
+      for (const letter of ret[1]) {
+        this._discord_cli.msg_everyone(`${msg.author.username} just used the bonus letter \`[${letter}]\` in their final guess`)
+      }
+      this._discord_cli.msg_everyone(ret[2])
+      this._discord_cli.msg_user(msg.author.id, this._format_board(msg.author.id))
       if (this._players.all_players_have_final_guess()) {
         this._state = STATE.SHOWING_RESULTS
-        this._discord_cli.msg_everyone(`_ _\n\n\`${this._players.format_results()}\`\n`)
+        this._discord_cli.msg_everyone(this._players.format_results())
       }
     })
   }
@@ -432,7 +440,7 @@ export class StrawberryJam {
         return this._discord_cli.log_and_reply(msg, `Can't results until end of game`)
       }
 
-      return this._discord_cli.log_and_reply(msg, `_ _\n\n\`${this._players.format_results()}\`\n`)
+      return this._discord_cli.log_and_reply(msg, this._players.format_results())
     })
   }
 
