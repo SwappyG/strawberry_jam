@@ -26,6 +26,7 @@ export class Player {
     }
 
     this.guesses = Array(this.length_of_words).fill(null)
+    this.votes = null
 
     this.state = PLAYER_STATE.CHOOSING_WORD    
   }
