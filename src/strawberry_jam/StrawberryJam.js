@@ -10,7 +10,7 @@ import { Clues } from './Clues.js';
 
 import { format_hint, format_board } from './FormatOutput.js'
 import { get_help_string } from './Help.js';
-import { char_array_to_int_array } from './String.js';
+import { char_array_to_int_array } from '../utils/String.js';
 
 export const make_strawberry_jam = (game_id, args, callbacks) => {
   if (!args.word_length && !args.w) {

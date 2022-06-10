@@ -1,7 +1,5 @@
-
-
 export class PublicPiles {
-  constructor (deck, num_players, options) {
+  constructor(deck, num_players, options) {
     this._piles = []
     if (num_players < 6) { this._piles.push(deck.draw_cards(7)) }
     if (num_players < 5) { this._piles.push(deck.draw_cards(8)) }
@@ -25,12 +23,12 @@ export class PublicPiles {
       const ii = public_pile_index - num_players - 1
       deck.discard(this._piles[ii][0])
       this._piles[ii].splice(0, 1)
-      
+
       if (this._piles[ii].length === 0) {
         if (this._clues[ii]) {
           this._clues[ii] = 0
           depleted_piles.push(public_pile_index)
-        } 
+        }
         this._piles[ii] = deck.draw_cards(1)
         console.log(this._piles[ii])
       }
@@ -52,9 +50,9 @@ export class PublicPiles {
     console.log(`name_len: ${name_len}, name.length: ${name.length}`)
     const name_spacer = `${' '.repeat(name_len - name.length)}`
     const pile = this.format_pile_for_board(ii)
-    const pile_spacer = ' '.repeat((max_pile_size - pile.length) + 4) 
+    const pile_spacer = ' '.repeat((max_pile_size - pile.length) + 4)
     const clue = this._clues[ii] ? `/ (!) /` : `/     /`
-    return `${index} ${name}${name_spacer}${pile}${pile_spacer}${clue}` 
+    return `${index} ${name}${name_spacer}${pile}${pile_spacer}${clue}`
   }
 
   format_for_board = (num_players, name_len) => {
@@ -66,5 +64,4 @@ export class PublicPiles {
     }
     return ret
   }
-
 }

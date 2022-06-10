@@ -1,6 +1,5 @@
-
 export class BonusCards {
-  constructor () {
+  constructor() {
     this._cards = []
     this._used = []
     this._wild_used = false
@@ -90,8 +89,8 @@ export class BonusCards {
   }
 
   format_bonus_card_for_board = (ii, name_len) => {
-    const index = `< ${7+ii} >`
-    const name = 'bonus'  
+    const index = `< ${7 + ii} >`
+    const name = 'bonus'
     const name_spacer = `${' '.repeat(name_len - name.length)}`
     const card = `[${this._cards[ii].toUpperCase()}]`
     const is_used = `${this._used[ii] ? '/ IS_USED' : `/ IS_AVAIL`}`
