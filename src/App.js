@@ -1,5 +1,5 @@
-import { make_strawberry_jam } from "./StrawberryJam.js"
-import { DiscordClient } from "./DiscordClient.js"
+import { make_strawberry_jam } from "./strawberry_jam/StrawberryJam.js"
+import { DiscordClient } from "./discord_client/DiscordClient.js"
 
 import express from "express"
 

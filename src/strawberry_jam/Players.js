@@ -1,5 +1,5 @@
-import { Player } from "./Player.js"
-import { format_clue_tokens } from "./FormatOutput.js"
+import { Player } from "./strawberry_jam/Player.js/index.js"
+import { format_clue_tokens } from "./strawberry_jam/FormatOutput.js/index.js"
 import { format_score_breakdown } from "./Score.js"
 
 export class Players {

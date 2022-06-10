@@ -5,7 +5,7 @@ import fetch from "node-fetch"
 
 import { Constants, Client } from 'discord.js'
 
-import { random_str } from "./String.js"
+import { random_str } from "../utils/String.js"
 
 const _DISCORD_PREFIX = "?"
 

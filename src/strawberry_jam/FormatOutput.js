@@ -1,30 +1,30 @@
- const format_board_help = () => {
-   return (
-      `< 0 > wildcard     [*]    / IS_AVAIL` + `\n` +
-      `\n` +
-      `   ,-player num            ,-current letter      ,-clue space     ,-state` + `\n` +
-      `< 1 > Player1      [ ][ ][?][ ][ ] /    /                 / RESPONDING_TO_HINT` + `\n` +
-      `                                     ^- bonus letter spot` + `\n` +
-      `\n` +
-      `< 2 > Player2      [ ][ ][ ][E][ ]/     /                 / GIVING_HINT` + `\n` +
-      `< 3 > Player3      [ ][ ][ ][ ][ ]/ [G] /                 / READY` + `\n` +
-      `\n` +
-      `                        ,-cards in pile` + `\n` +
-      `< 4 > public       [S]]]]]   / (!) /` + `\n` +
-      `                                ^-hint clue below pile` + `\n` +
-      `                                 ,-depleted clue token` + `\n` +
-      `< 5 > public       [T]       /     /` + `\n` +
-      `< 6 > public       [P]]]     / (!) /` + `\n` +
-      `\n` +
-      `                                ,-usage in final guess` + `\n` +
-      `< 7 > bonus        [K]    / IS_USED` + `\n` +
-      `< 8 > bonus        [A]    / IS_AVAIL` + `\n` +
-      `\n` +
-      `\n                  ,-pile of 3 clues` + `\n` +
-      `Remaining Clues / (!))) (!))) (!)   /` + `\n` +
-      `Locked Clues    / (!)))             /` + `\n`
-   )        
- }
+const format_board_help = () => {
+  return (
+    `< 0 > wildcard     [*]    / IS_AVAIL` + `\n` +
+    `\n` +
+    `   ,-player num            ,-current letter      ,-clue space     ,-state` + `\n` +
+    `< 1 > Player1      [ ][ ][?][ ][ ] /    /                 / RESPONDING_TO_HINT` + `\n` +
+    `                                     ^- bonus letter spot` + `\n` +
+    `\n` +
+    `< 2 > Player2      [ ][ ][ ][E][ ]/     /                 / GIVING_HINT` + `\n` +
+    `< 3 > Player3      [ ][ ][ ][ ][ ]/ [G] /                 / READY` + `\n` +
+    `\n` +
+    `                        ,-cards in pile` + `\n` +
+    `< 4 > public       [S]]]]]   / (!) /` + `\n` +
+    `                                ^-hint clue below pile` + `\n` +
+    `                                 ,-depleted clue token` + `\n` +
+    `< 5 > public       [T]       /     /` + `\n` +
+    `< 6 > public       [P]]]     / (!) /` + `\n` +
+    `\n` +
+    `                                ,-usage in final guess` + `\n` +
+    `< 7 > bonus        [K]    / IS_USED` + `\n` +
+    `< 8 > bonus        [A]    / IS_AVAIL` + `\n` +
+    `\n` +
+    `\n                  ,-pile of 3 clues` + `\n` +
+    `Remaining Clues / (!))) (!))) (!)   /` + `\n` +
+    `Locked Clues    / (!)))             /` + `\n`
+  )
+}
 
 export const format_board = (players, public_piles, bonus_cards, clues, messenger_id, help = false) => {
   if (help) {
@@ -77,27 +77,27 @@ export const format_hint = (player, players, public_piles, bonus_cards, hint_ind
 }
 
 export const format_clue_tokens = (num) => {
-  const div_10 = Math.floor(num/10)
+  const div_10 = Math.floor(num / 10)
 
   let ret = ''
   if (div_10 > 0) {
     ret = `(X)`
-    ret = `${ret}${' (X)'.repeat(div_10-1)}`
+    ret = `${ret}${' (X)'.repeat(div_10 - 1)}`
     num = num % 10
   }
 
-  const div_3 = Math.floor(num/3)
+  const div_3 = Math.floor(num / 3)
   const rem_3 = num % 3
 
   if (div_3 > 0) {
     ret = ret.length > 0 ? `${ret} (!)))` : `(!)))`
-    ret = `${ret}${' (!)))'.repeat(div_3-1)}`
+    ret = `${ret}${' (!)))'.repeat(div_3 - 1)}`
   }
 
   if (rem_3 > 0) {
     ret = ret.length > 0 ? `${ret} (!)` : `(!)`
-    ret = `${ret}${')'.repeat(rem_3-1)}`
+    ret = `${ret}${')'.repeat(rem_3 - 1)}`
   }
 
-  return `${ret}${' '.repeat(17-ret.length)}`
+  return `${ret}${' '.repeat(17 - ret.length)}`
 }

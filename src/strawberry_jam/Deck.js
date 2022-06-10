@@ -22,8 +22,8 @@ const _FULL_DECK = [
   'y', 'y'
 ]
 
-class Deck {
-  constructor (cards = null) {
+export class Deck {
+  constructor(cards = null) {
     this._cards = cards ?? _FULL_DECK.slice()
     this._discard = []
   }
@@ -57,15 +57,15 @@ class Deck {
       this._cards = this._discard
       this._discard = []
     }
-  
+
     let popped_cards = []
     for (let ii = 0; ii < num; ii++) {
-      const index = Math.floor(Math.random()*this._cards.length)
+      const index = Math.floor(Math.random() * this._cards.length)
       popped_cards.push(this._cards[index])
       this._cards.splice(index, 1)
     }
     return popped_cards
-  } 
+  }
 
   draw_specific_cards = (cards, cards_to_return = null) => {
     if (cards_to_return) {
@@ -88,8 +88,4 @@ class Deck {
     }
     return missing_letters
   }
-}
-
-export {
-  Deck
 }
