@@ -5,10 +5,12 @@ import fetch from "node-fetch"
 
 import { Constants, Client } from 'discord.js'
 
+import { random_str } from "./String.js"
+
 const _DISCORD_PREFIX = "?"
 
 class DiscordClient {
-  constructor({ discord_token_file_path, game_type, prefix }) {
+  constructor({ discord_token_file_path, game_generator, prefix }) {
     this.prefix = prefix ?? _DISCORD_PREFIX
     this._client = new Client()
 
@@ -27,106 +29,222 @@ class DiscordClient {
       throw new Error(`Failed to find discord token`)
     }
 
-    this._users = []
+    this._game_generator = game_generator
+    this._games = {}
+    this._users = {}
     this._cmds = {}
-    this._is_idle = true
-    this._heroku_dyno_pinger = null
-
-    this._game_type = game_type
-    this._game = new this._game_type(this)
+    this._make_commands()
   }
 
-  _start_game = () => {
-    console.log(`Starting a new instance of $${typeof this._game_type}`)
-    this._is_idle = false
-    this._game = new this._game_type(this)
+  _add_commands = (cmds, func) => {
+    if (!Array.isArray(cmds)) {
+      cmds = [cmds]
+    }
+    for (const c of cmds) {
+      this._cmds[c] = func
+    }
+  }
 
-    this._heroku_dyno_pinger = setInterval(() => {
+  _make_commands = () => {
+    this._add_commands(['server_lobby', 'L'], this._show_games)
+    this._add_commands(['new_game', 'N'], this._new_game)
+    this._add_commands(['join_game', 'J'], this._join_game)
+    this._add_commands(['exit_game', 'X'], this._exit_game)
+    this._add_commands(['kill_game', 'K'], this._kill_game)
+  }
+
+  _make_heroku_dyno_pinger = (id) => {
+    setInterval(() => {
       if (this._is_running_on_heroku) {
         fetch("http://swappy-jam.herokuapp.com", { method: 'GET' })
           .then(console.log(`successfully pinged heroku app`))
           .catch(reason => {
-            this._end_game(`Can't contact server, got [${reason}], exiting`)
+            this._end_game(id, `Can't contact server, got [${reason}], exiting`)
           })
       }
-      if (Date.now() - this._last_command_timestamp > 15 * 60 * 1000) {
-        this._end_game(`No msgs received in the last 15 minutes. Any active game will be ended`)
+      if (Date.now() - this._games[id].last_cmd_timestamp > 15 * 60 * 1000) {
+        this._end_game(id, `No msgs received in the last 15 minutes. Any active game will be ended`)
       }
     }, 15 * 60 * 1000)
   }
 
-  _end_game = (reason) => {
+  _end_game = async (game_id, reason) => {
     if (reason) {
-      this.msg_everyone(reason)
+      this.msg_everyone_in_game(game_id, reason)
     }
-    this._cmds = {}
-    this._users = []
-    this._game = null
-    this._is_idle = true
-    clearInterval(this._heroku_dyno_pinger)
-    this._heroku_dyno_pinger = null
+    clearInterval(this._games[game_id].heroku_dyno_pinger)
+    this._games[game_id].heroku_dyno_pinger = null
+    this._games[game_id].is_idle = true
+    this._games[game_id].game = null
+    for (const user of this._games[game_id].users) {
+      delete this._users[user.id]
+    }
+    this._games[game_id].users = []
   }
 
-  add_user = (user) => {
-    console.log(`Adding user: ${user.username}, id: ${user.id}`)
-    this._users.push(user)
+  _new_game = async (msg, args) => {
+    const game_id = random_str(4)
+    const callbacks = {
+      'reply': this.log_and_reply,
+      'msg_everyone': (text) => { this.msg_everyone_in_game(game_id, text) },
+      'msg_user': (user_id, text) => { this.msg_user(user_id, text) },
+      'prefix': () => { return this.prefix }
+    }
+
+    const [success, ...ret] = this._game_generator(game_id, args, callbacks)
+    if (!success) {
+      return this.log_and_reply(msg, ret[0])
+    }
+
+    const game = ret[0]
+    const commands = game.get_commands().reduce((accum, [cmds, func]) => {
+      if (!Array.isArray(cmds)) {
+        cmds = [cmds]
+      }
+      cmds.forEach(cmd => { accum[cmd] = func })
+      return accum
+    }, {})
+
+    this._games[game_id] = {
+      'id': game_id,
+      'creator': msg.author.username,
+      'creator_id': msg.author.id,
+      'users': [],
+      'max_players': args?.max_players ?? 6,
+      'is_idle': false,
+      'last_cmd_timestamp': Date.now(),
+      'heroku_dyno_pinger': this._make_heroku_dyno_pinger(game_id),
+      'game': ret[0],
+      'commands': commands
+    }
+    this.log_and_reply(msg, `A new game with ID \`${game_id}\` was created`)
   }
 
-  remove_user = (user) => {
-    const index = this._users.findIndex(u => u.id === user.id)
+  _kill_game = async (msg, args) => {
+    if (args["_"].length < 2) {
+      return this.log_and_reply(msg, `You need to specify ID of game to kill`)
+    }
+
+    const game_id = args["_"][1]
+    if (this._games[game_id] === undefined) {
+      return this.log_and_reply(msg, `There is no game with ID: \`${game_id}\``)
+    }
+
+    this._end_game(game_id, `The game was killed by ${msg.author.username}`)
+    delete this._games[game_id]
+
+    this.log_and_reply(msg, `Killed game with ID: \`${game_id}\``)
+  }
+
+  _join_game = async (msg, args) => {
+    if (args["_"].length < 2) {
+      return this.log_and_reply(msg, `You need to specify ID of game to join`)
+    }
+
+    const game_id = args["_"][1]
+    if (this._games[game_id] === undefined) {
+      return this.log_and_reply(msg, `There is no game with ID: \`${game_id}\``)
+    }
+
+    if (this._users[msg.author.id] !== undefined) {
+      return this.log_and_reply(msg, `You are already in a game wiht ID: \`${this._users[msg.author.id].game_id}\``)
+    }
+
+    console.log(this._games[game_id].game.join)
+    const [success, ...ret] = await this._games[game_id].game.join(msg.author.id, msg.author.username)
+    if (!success) {
+      return this.log_and_reply(msg, ret[0])
+    }
+
+    this.add_user(game_id, msg.author)
+    this.log_and_reply(msg, `You've joined the game! From here on, DM all commands, DON'T MSG IN PUBLIC CHANNEL`)
+    this.msg_everyone_in_game(game_id, `${msg.author.username} has joined the game!`)
+  }
+
+  _exit_game = async (msg, args) => {
+    const [game_id, game] = Object.entries(this._games).find(([id, data]) => {
+      return data.users.find(user => { user.id === msg.author.id }) !== null
+    })
+
+    if (game_id === undefined || this._users[msg.author.id] === undefined) {
+      return this.log_and_reply(msg, `You aren't in any games`)
+    }
+
+    const [success, ...ret] = this._game[game_id].exit(msg.author.id)
+    if (!success) {
+      return this.log_and_reply(msg, ret[0])
+    }
+
+    this.remove_user(game_id, msg.author.id)
+    this._discord_cli.msg_everyone(game_id, `${msg.author.username} has left the game`)
+    this._discord_cli.log_and_reply(msg, `You've left game \`${game_id}\``)
+  }
+
+  _show_games = async (msg, args) => {
+    let ret = '_ _\n\nAvailable Games'
+
+    if (args.id) {
+      if (this._games[args.id] === undefined) {
+        return this.log_and_reply(`There is no game with ID ${args.id}`)
+      }
+
+      const game = this._games[args.id].game
+      const creator = this._games[args.id].creator
+      return this.log_and_reply(msg, `_ _\n\nLobby Info for \`${args.id}\`:\nCreated By: ${creator}\n${await game.format_for_lobby(true)}`)
+    }
+
+    for (const [id, data] of Object.entries(this._games)) {
+      ret = `${ret}\n\` - [${id}] / Created by ${data.creator} / ${await data.game.format_for_lobby()}\``
+    }
+    this.log_and_reply(msg, ret)
+  }
+
+  add_user = (game_id, user) => {
+    console.log(`Adding user: ${user.username}, id: ${user.id} to game \`${game_id}\``)
+    this._games[game_id].users.push(user)
+    this._users[user.id] = {
+      'user': user,
+      'game_id': game_id
+    }
+  }
+
+  remove_user = (game_id, user_id) => {
+    const index = this._games[game_id].users.findIndex(user => { user.id === user_id })
     if (index !== -1) {
-      this._users.splice(index, 1)
+      console.log(`Removing user: ${this._games[game_id].users[index].username}, id: ${user_id} from game \`${game_id}\``)
+      this._games[game_id].users.splice(index, 1)
+      delete this._users[user_id]
     }
   }
 
-  purge_users = () => {
-    this._users = []
-  }
-
-  add_command = (names, callback) => {
+  add_game_command = (game_id, names, callback) => {
+    console.log(game_id)
+    console.log(this._games)
     if (!Array.isArray(names)) {
       names = [names]
     }
     for (const n of names) {
-      this._cmds[n] = callback
+      this._games[game_id].commands[n] = callback
     }
   }
 
-  remove_command = (name, callback) => {
-    if (this._cmds[name]) {
-      delete this._cmds[name]
-    }
-  }
-
-  purge_commands = () => {
-    this._cmds = {}
-  }
-
-  log_and_reply = (discord_msg, log_msg, dm = false) => {
-    console.log(log_msg)
-    if (dm) {
-      discord_msg.author.send(log_msg)
-    } else {
-      discord_msg.reply(log_msg)
-    }
+  log_and_reply = (discord_msg, text) => {
+    console.log(text)
+    discord_msg.reply(text)
   }
 
   msg_user = (user_id, msg) => {
-    const user = this._users.find(user => user.id === user_id)
-    if (!user) {
+    if (this._users[user_id] === undefined) {
       console.log(`msg_user called with invalid user id, ${user_id}. Registered ids:`)
-      for (const user in this._users) {
-        console.log(` - ${user}`)
-      }
       return
     }
-    user.send(msg)
+    this._users[user_id].user.send(msg)
   }
 
-  msg_everyone = (msg) => {
-    console.log(msg)
-    for (const user of this._users) {
-      user.send(msg)
+  msg_everyone_in_game = (game_id, text) => {
+    console.log(text)
+    for (const user of this._games[game_id].users) {
+      user.send(text)
     }
   }
 
@@ -163,11 +281,24 @@ class DiscordClient {
       console.log(`\nReceived msg from [${author_name}] at [${guild_name}: ${channel_name}]`)
       console.log(args)
 
-      if (this._cmds[args["_"][0]]) {
+      if (this._cmds[args["_"][0]] !== undefined) {
         return await this._cmds[args["_"][0]](msg, args)
-      } else {
+      }
+
+      if (this._users[msg.author.id] === undefined && !args.game) {
+        return this.log_and_reply(msg, `You aren't part of any game, so to make game specific commands, use \`--game\` flag with \`<game id>\``)
+      }
+
+      const game_id = this._users[msg.author.id]?.game_id ?? args.game_id
+      if (this._games[game_id] === undefined) {
+        return this.log_and_reply(msg, `The game id \`${game_id} doesn't correspond to any existing game.\``)
+      }
+
+      if (this._games[game_id].commands[args["_"][0]] === undefined) {
         return this.log_and_reply(msg, `Command ${trimmed_msg} is invalid, try ?help for proper syntax`)
       }
+
+      return await this._games[game_id].commands[args["_"][0]](msg, args)
     } catch (e) {
       const err = `Caught exception while processing message: \n${e.stack}`
       console.log(err);
