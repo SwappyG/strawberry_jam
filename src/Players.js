@@ -25,6 +25,10 @@ export class Players {
     }, 0)
   }
 
+  get_player_names = () => {
+    this._players.map(p => { return p.name })
+  }
+
   players = () => {
     return this._players
   }

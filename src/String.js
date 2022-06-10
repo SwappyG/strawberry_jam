@@ -23,3 +23,10 @@ export const char_array_to_int_array = (arr) => {
   return has_invalid_index ? null : int_arr
 }
 
+export const random_str = (len) => {
+  let ret = ''
+  for (let ii = 0; ii < len; ii++) {
+    ret = ret + String.fromCharCode(Math.floor(Math.random() * 26) + 'A'.charCodeAt(0))
+  }
+  return ret
+}
