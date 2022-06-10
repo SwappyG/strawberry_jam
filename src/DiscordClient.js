@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { parseArgsStringToArgv } from 'string-argv'
 import minimist from 'minimist';
+import fetch from "node-fetch"
 
 import { Constants, Client } from 'discord.js'
 
