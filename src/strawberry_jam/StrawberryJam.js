@@ -80,35 +80,17 @@ export class StrawberryJam {
     }, {})
   }
 
-  format_for_lobby = async (detailed = false) => {
-    return this._mutex.runExclusive(() => {
-      const summary = `StrawberryJam / ${this.options.length_of_words} Letters / (${this._players.num()}/${this.options.max_players}) players / ${this._state}`
-      if (!detailed) {
-        return summary
-      }
-      let ret = `${summary}`
-      for (const p of this._players.get()) {
-        ret = `${ret}\n - ${p.name} / ${p.state}`
-      }
-      ret = ret + '\n'
-      for (const [k, v] of Object.entries(this.options)) {
-        ret = `${ret}\n${k}: ${v}`
-      }
-      return `\`\`\`${ret}\`\`\``
-    })
-  }
+  // get_num_players = async () => {
+  //   return await this._mutex.runExclusive(() => {
+  //     return this._players.num()
+  //   })
+  // }
 
-  get_num_players = async () => {
-    return this._mutex.runExclusive(() => {
-      return this._players.num()
-    })
-  }
-
-  get_player_names = async () => {
-    return this._mutex.runExclusive(() => {
-      return this._players.get().map(p => { return p.name })
-    })
-  }
+  // get_player_names = async () => {
+  //   return this._mutex.runExclusive(() => {
+  //     return this._players.get().map(p => { return p.name })
+  //   })
+  // }
 
   join = async (discord_user) => {
     return this._mutex.runExclusive(() => {
@@ -117,7 +99,7 @@ export class StrawberryJam {
       }
 
       return this._players.add_player({
-        discord_id: discord_user,
+        discord_user: discord_user,
         length_of_words: this.options.length_of_words
       })
     })
@@ -136,6 +118,24 @@ export class StrawberryJam {
   help = async (player_id) => {
     return this._mutex.runExclusive(() => {
       return get_help_string(this._state, this._prefix, this._players.get_player(player_id))
+    })
+  }
+
+  format_for_lobby = async (detailed = false) => {
+    return this._mutex.runExclusive(() => {
+      const summary = `StrawberryJam / ${this.options.length_of_words} Letters / (${this._players.num()}/${this.options.max_players}) players / ${this._state}`
+      if (!detailed) {
+        return summary
+      }
+      let ret = `${summary}`
+      for (const p of this._players.get()) {
+        ret = `${ret}\n - ${p.name} / ${p.state}`
+      }
+      ret = ret + '\n'
+      for (const [k, v] of Object.entries(this.options)) {
+        ret = `${ret}\n${k}: ${v}`
+      }
+      return `\`\`\`${ret}\`\`\``
     })
   }
 
