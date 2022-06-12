@@ -8,36 +8,6 @@ export class Players {
     this._max_players = max_players
   }
 
-  id_exists = (id) => {
-    return this._players.findIndex(p => p.id === id) !== -1
-  }
-
-  get_player_index = (id) => {
-    return this._players.findIndex(p => p.id === id)
-  }
-
-  get_player = (id) => {
-    return this._players.find(p => p.id === id)
-  }
-
-  get_max_char_of_names = () => {
-    return this._players.reduce((prev, curr) => {
-      return curr.name.length > prev ? curr.name.length : prev
-    }, 0)
-  }
-
-  get_player_names = () => {
-    this._players.map(p => { return p.name })
-  }
-
-  players = () => {
-    return this._players
-  }
-
-  num = () => {
-    return this._players.length
-  }
-
   add_player = ({ discord_id, name, length_of_words }) => {
     if (this.id_exists(discord_id)) {
       return [false, `${name} has already joined`]
@@ -52,7 +22,7 @@ export class Players {
   }
 
   remove_player = (discord_id) => {
-    const ii = this.get_player_index(discord_id)
+    const ii = this.get_index_from_id(discord_id)
     if (ii === -1) {
       return [false, `Player was not in the game`]
     }
@@ -63,27 +33,13 @@ export class Players {
   }
 
   apply_to_player = (id, callable) => {
-    const ii = this.get_player_index(id)
+    const ii = this.get_index_from_id(id)
     if (ii === -1) {
       return [false, `Player isn't in the game`]
     }
     let player = this._players[ii]
 
     return callable(player)
-  }
-
-  get_players_with_no_word = () => {
-    let players_that_havent_set_word = []
-    for (const player of this._players) {
-      if (!player.is_waiting_for_assigned_word()) {
-        players_that_havent_set_word.push(player.name)
-      }
-    }
-    return players_that_havent_set_word
-  }
-
-  get_player_active_letter_by_num = (num) => {
-    return this._players.find(p => p.num === num).get_active_letter()
   }
 
   assign_word_to_all_players = (id, options) => {
@@ -96,7 +52,7 @@ export class Players {
       return [false, `At least 2 players are required to play`]
     }
 
-    const players_that_havent_set_word = this.get_players_with_no_word()
+    const players_that_havent_set_word = this._players.filter(p => p.is_waiting_for_assigned_word()).map(p => p.name)
     if (players_that_havent_set_word.length > 0) {
       return [false, `The following players haven't selected a word ${players_that_havent_set_word}`]
     }
@@ -113,10 +69,71 @@ export class Players {
     return [true, `All players have been assigned their word. The game has been started`]
   }
 
-  end_round = () => {
-    for (let player of this._players) {
-      player.round_complete()
+  add_votes = (voter_id, votes) => {
+    let player = this.get_player(voter_id)
+    if (player === null) {
+      return [false, `You can't vote if you're not in the game`]
     }
+
+    const vote_indices = votes.toString().split(',')
+    if (vote_indices.length !== [...new Set(vote_indices)].length) {
+      return [false, `You can't have duplicate indices when for your votes`]
+    }
+
+    const votes_int = vote_indices.map(v => parseInt(v))
+    if (votes_int.some(v => isNaN(v))) {
+      return [false, `Your votes must be integers`]
+    }
+
+    if (votes_int.some(v => v < 1 || v > this.num())) {
+      return [false, `Your indices must correspond to player nums, ie they must be between \`1\` and \`${this.num()}\``]
+    }
+
+    player.votes = votes_int
+    const names = votes_int.map(num => this._players.find(p => p.num === num).name)
+    return [true, `${player.name} believes [${names.join(', ')}] have proper words`]
+  }
+
+  end_round = () => {
+    this._players.forEach(p => p.round_complete())
+  }
+
+  num = () => {
+    return this._players.length
+  }
+
+  id_exists = (id) => {
+    return this._players.findIndex(p => p.id === id) !== -1
+  }
+
+  get = () => {
+    return this._players
+  }
+
+  get_index_from_id = (id) => {
+    return this._players.findIndex(p => p.id === id)
+  }
+
+  get_player = (id) => {
+    return this._players.find(p => p.id === id)
+  }
+
+  get_max_char_of_names = () => {
+    return this._players.reduce((prev, curr) => {
+      return curr.name.length > prev ? curr.name.length : prev
+    }, 0)
+  }
+
+  get_players_with_no_word = () => {
+    return this._players.filter(p => p.is_waiting_for_assigned_word()).map(p => p.name)
+  }
+
+  get_player_active_letter_by_num = (num) => {
+    return this._players.find(p => p.num === num).get_active_letter()
+  }
+
+  get_player_clues_given = () => {
+    return this._players.map(p => p.hints_given)
   }
 
   all_players_done_responding_to_hint = () => {
@@ -125,10 +142,6 @@ export class Players {
 
   all_players_have_final_guess = () => {
     return this._players.every(p => p.final_guess !== null)
-  }
-
-  get_player_clues_given = () => {
-    return this._players.map(p => p.hints_given)
   }
 
   all_players_met_required_clues = () => {
@@ -173,31 +186,6 @@ export class Players {
       main_cards[active_letter_index] = is_hidden ? '?' : active_letter.toUpperCase()
     }
     return `${main_cards.join('')} ${bonus_card}`
-  }
-
-  add_votes = (voter_id, votes) => {
-    let player = this.get_player(voter_id)
-    if (player === null) {
-      return [false, `You can't vote if you're not in the game`]
-    }
-
-    const vote_indices = votes.toString().split(',')
-    if (vote_indices.length !== [...new Set(vote_indices)].length) {
-      return [false, `You can't have duplicate indices when for your votes`]
-    }
-
-    const votes_int = vote_indices.map(v => parseInt(v))
-    if (votes_int.some(v => isNaN(v))) {
-      return [false, `Your votes must be integers`]
-    }
-
-    if (votes_int.some(v => v < 1 || v > this.num())) {
-      return [false, `Your indices must correspond to player nums, ie they must be between \`1\` and \`${this.num()}\``]
-    }
-
-    player.votes = votes_int
-    const names = votes_int.map(num => this._players.find(p => p.num === num).name)
-    return [true, `${player.name} believes [${names.join(', ')}] have proper words`]
   }
 
   format_for_board = (id) => {
