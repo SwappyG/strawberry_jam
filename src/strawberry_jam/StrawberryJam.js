@@ -110,27 +110,26 @@ export class StrawberryJam {
     })
   }
 
-  join = async (user_id, user_name) => {
+  join = async (discord_user) => {
     return this._mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return [false, `The game has already started, you are no longer able to join`]
       }
 
       return this._players.add_player({
-        discord_id: user_id,
-        name: user_name,
+        discord_id: discord_user,
         length_of_words: this.options.length_of_words
       })
     })
   }
 
-  exit = async (user_id) => {
+  exit = async (discord_user) => {
     return this._mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return [false, `Cannot leave before game exists or after its already running`]
       }
 
-      return this._players.remove_player(user_id)
+      return this._players.remove_player(discord_user)
     })
   }
 
