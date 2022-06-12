@@ -3,11 +3,11 @@ import { is_letters, shuffle_string } from "../utils/String.js"
 import { array_last } from "../utils/ArrayUtils.js"
 
 export class Player {
-  constructor({ discord_user, name, length_of_words }) {
+  constructor({ discord_user, length_of_words }) {
     this.id = discord_user.id
+    this.name = discord_user.username
     this.discord_user = discord_user
     this.send_cb
-    this.name = name
     this.num = null
 
     this.length_of_words = length_of_words
@@ -288,5 +288,20 @@ export class Player {
     }
     this.final_guess = guess.join('')
     return [true, wild_used, bonus_cards_used, `${this.name} made their final guess`]
+  }
+
+  format_cards = (is_hidden = false) => {
+    const word_len = player.assigned_word.length
+
+    let main_cards = ('[ ]'.repeat(word_len)).split('')
+    let bonus_card = `/    `
+    if (this.on_bonus_letter) {
+      bonus_card = is_hidden ? '/ [?]' : `/ [${this.bonus_letter.toUpperCase()}]`
+    } else {
+      const active_letter = this.assigned_word[this.letter_index]
+      const active_letter_index = (this.letter_index + 1) * 3 - 2
+      main_cards[active_letter_index] = is_hidden ? '?' : active_letter.toUpperCase()
+    }
+    return `${main_cards.join('')} ${bonus_card}`
   }
 }

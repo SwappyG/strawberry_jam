@@ -4,47 +4,43 @@ import { format_score_breakdown } from "./Score.js"
 
 export class Players {
   constructor(max_players) {
-    this._players = []
+    this._players = new Map()
     this._max_players = max_players
   }
 
-  add_player = ({ discord_id, name, length_of_words }) => {
-    if (this.id_exists(discord_id)) {
+  add_player = ({ discord_user, length_of_words }) => {
+    if (this._players.has(discord_user.id)) {
       return [false, `${name} has already joined`]
     }
 
-    if (this._players.length >= this._max_players) {
+    if (this._players.size() >= this._max_players) {
       return [false, `The game lobby is full`]
     }
 
-    this._players.push(new Player({ discord_id: discord_id, name: name, length_of_words: length_of_words }))
-    return [true, `${name} has been added to the game`]
+    this._players.set(discord_user.id, new Player({ discord_user, length_of_words }))
+    return [true, `${discord_user.username} has been added to the game`]
   }
 
-  remove_player = (discord_id) => {
-    const ii = this.get_index_from_id(discord_id)
-    if (ii === -1) {
-      return [false, `Player was not in the game`]
+  remove_player = (discord_user) => {
+    if (!this._players.has(discord_user.id)) {
+      return [false, `\`${discord_user.name}\` was not in the game`]
     }
 
-    const name = this._players[ii].name.slice()
-    this._players.splice(ii, 1)
+    const name = this._players.get(discord_user.id).name.slice()
+    this._players.delete(discord_user.id)
     return [true, `${name} has left the game`]
   }
 
-  apply_to_player = (id, callable) => {
-    const ii = this.get_index_from_id(id)
-    if (ii === -1) {
-      return [false, `Player isn't in the game`]
+  apply_to_player = (discord_user, callable) => {
+    if (!this._players.has(discord_user.id)) {
+      return [false, `\`${discord_user.username}\` was not in the game`]
     }
-    let player = this._players[ii]
-
-    return callable(player)
+    return callable(this._players.get(discord_user.id))
   }
 
-  assign_word_to_all_players = (id, options) => {
-    if (!this.id_exists(id)) {
-      return [false, `Player isn't in the game`]
+  assign_word_to_all_players = (discord_user, options) => {
+    if (!this._players.has(discord_user.id)) {
+      return [false, `\`${discord_user.username}\` was not in the game`]
     }
 
     const num_players = this.num()
@@ -52,15 +48,14 @@ export class Players {
       return [false, `At least 2 players are required to play`]
     }
 
-    const players_that_havent_set_word = this._players.filter(p => p.is_waiting_for_assigned_word()).map(p => p.name)
+    const players_that_havent_set_word = this.players.entries().filter(([k, p]) => p.is_waiting_for_assigned_word()).map(p => p.name)
     if (players_that_havent_set_word.length > 0) {
       return [false, `The following players haven't selected a word ${players_that_havent_set_word}`]
     }
 
-    let prev_word = this._players[num_players - 1].word
+    let prev_word = this._players.entries()[this._players.size() - 1][1].word
     let ii = 1
-    for (const player of this._players) {
-      console.log(`assigning word to ${player.name}`)
+    for (const [id, player] of this._players) {
       player.assign_word(prev_word, ii)
       ii = ii + 1
       prev_word = player.word.slice()
@@ -90,78 +85,75 @@ export class Players {
     }
 
     player.votes = votes_int
-    const names = votes_int.map(num => this._players.find(p => p.num === num).name)
+    const names = votes_int.map(num => this._players.entries().find(p => p.num === num).name)
     return [true, `${player.name} believes [${names.join(', ')}] have proper words`]
   }
 
   end_round = () => {
-    this._players.forEach(p => p.round_complete())
+    this.players.entries().forEach(p => p.round_complete())
   }
 
   num = () => {
-    return this._players.length
-  }
-
-  id_exists = (id) => {
-    return this._players.findIndex(p => p.id === id) !== -1
+    return this._players.size()
   }
 
   get = () => {
     return this._players
   }
 
-  get_index_from_id = (id) => {
-    return this._players.findIndex(p => p.id === id)
-  }
-
-  get_player = (id) => {
-    return this._players.find(p => p.id === id)
+  get_player = (discord_id) => {
+    return this._players.get(discord_id) ?? null
   }
 
   get_max_char_of_names = () => {
-    return this._players.reduce((prev, curr) => {
-      return curr.name.length > prev ? curr.name.length : prev
+    return this.players.entries().reduce((prev, [id, player]) => {
+      return player.name.length > prev ? player.name.length : prev
     }, 0)
   }
 
   get_players_with_no_word = () => {
-    return this._players.filter(p => p.is_waiting_for_assigned_word()).map(p => p.name)
+    return this.players.entries().filter(([id, p]) => p.is_waiting_for_assigned_word()).map(p => p.name)
   }
 
   get_player_active_letter_by_num = (num) => {
-    return this._players.find(p => p.num === num).get_active_letter()
+    for (const p of this._players) {
+      if (p.num == num) {
+        return p.get_active_letter()
+      }
+    }
+    return null
   }
 
   get_player_clues_given = () => {
-    return this._players.map(p => p.hints_given)
+    return this.players.entries().map(([id, p]) => p.hints_given)
   }
 
   all_players_done_responding_to_hint = () => {
-    return this._players.every(p => p.is_ready() || p.is_giving_hint())
+    return this.players.entries().every(([id, p]) => p.is_ready() || p.is_giving_hint())
   }
 
   all_players_have_final_guess = () => {
-    return this._players.every(p => p.final_guess !== null)
+    return this._players.entries().every(([id, p]) => p.final_guess !== null)
   }
 
   all_players_met_required_clues = () => {
     const req_hints = () => {
-      if (this._players.length === 2) { return 3 }
-      if (this._players.length === 3) { return 2 }
+      if (this._players.size() === 2) { return 3 }
+      if (this._players.size() === 3) { return 2 }
       return 1
     }
-    return this._players.every(p => p.hints_given >= req_hints())
+    return this._players.entries().every(([id, p]) => p.hints_given >= req_hints())
   }
 
   format_player_states = () => {
-    if (this._players.length === 0) {
-      return `_ _\n\nThe lobby is empty\n`
+    if (this._players.size() === 0) {
+      return `_ _\n\nThe game has no players\n`
     }
 
     const len_names = this.get_max_char_of_names() + 4
     const header = `_ _\n\nGame Lobby`
     let ret = ``
-    for (const player of this._players) {
+    for (const [id, player] of this._players) {
       const name = player.name + ' '.repeat(len_names - player.name.length)
       const num = `< ${player.num !== null ? player.num : '?'} >`
       const clues = format_clue_tokens(player.hints_given)
@@ -173,26 +165,11 @@ export class Players {
     return `${header}\n\`\`\`${ret}\`\`\``
   }
 
-  format_player_cards = (player, is_hidden = false) => {
-    const word_len = player.assigned_word.length
-
-    let main_cards = ('[ ]'.repeat(word_len)).split('')
-    let bonus_card = `/    `
-    if (player.on_bonus_letter) {
-      bonus_card = is_hidden ? '/ [?]' : `/ [${player.bonus_letter.toUpperCase()}]`
-    } else {
-      const active_letter = player.assigned_word[player.letter_index]
-      const active_letter_index = (player.letter_index + 1) * 3 - 2
-      main_cards[active_letter_index] = is_hidden ? '?' : active_letter.toUpperCase()
-    }
-    return `${main_cards.join('')} ${bonus_card}`
-  }
-
-  format_for_board = (id) => {
+  format_for_board = (discord_id) => {
     const len_names = this.get_max_char_of_names() + 4
     let ret = ''
-    for (const [ii, player] of this._players.entries()) {
-      const cards = this.format_player_cards(player, id === player.id)
+    for (const [ii, player] of this._players) {
+      const cards = player.format_cards(player, discord_id === player.id)
       const name = player.name + ' '.repeat(len_names - player.name.length)
       const num = `< ${player.num !== null ? player.num : '?'} >`
       const clues = format_clue_tokens(player.hints_given)
@@ -217,7 +194,7 @@ export class Players {
       const assigned = `[${player.assigned_word}]`
       const guess = `[${player.final_guess}]`
       const voted = player.votes !== null ? "VOTED" : "NO_VOTE"
-      const votes = this._players.reduce((accum, p) => {
+      const votes = this._players.entries().reduce((accum, [id, p]) => {
         return accum + ((p.votes === null) ? 0 : p.votes.includes(player.num))
       }, 0)
       const vote_fraction = `(${(votes / this.num() * 100).toFixed(1)}%)`
@@ -234,7 +211,7 @@ export class Players {
 
     console.log(`correct_words: ${correct_words}`)
     console.log(`bonus_letters: ${bonus_letters}`)
-    const score = correct_words * this._players[0].length_of_words * 3 + bonus_letters * 1
+    const score = correct_words * this._players.entries()[0][1].length_of_words * 3 + bonus_letters * 1
     const score_chart = format_score_breakdown(this.num())
 
     return `_ _\n\nFinal Results\n\n\`\`\`Score: ${score}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
