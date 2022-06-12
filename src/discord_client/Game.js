@@ -50,7 +50,7 @@ export class GameData {
     this.users = []
   }
 
-  join_game = (discord_user) => {
+  join_game = async (discord_user) => {
     const [success, ...ret] = await this.game.join(discord_user.id, discord_user.username)
     if (!success) {
       return [success, ...ret]

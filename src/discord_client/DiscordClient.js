@@ -52,7 +52,7 @@ class DiscordClient {
     ]
 
     return cmds.reduce((accum, [cs, func]) => {
-      cs.forEach(cmd => accum[c] = func)
+      cs.forEach(c => accum[c] = func)
       return accum
     }, {})
   }
@@ -123,7 +123,7 @@ class DiscordClient {
       return log_and_reply(msg, `You need to specify ID of game to join`)
     }
 
-    const [success, ...ret] = await this._mutex.runExclusive(() => {
+    const [success, ...ret] = await this._mutex.runExclusive(async () => {
       const game_id = args["_"][1]
       if (this._games[game_id] === undefined) {
         return [false, `There is no game with ID: \`${game_id}\``]
@@ -180,7 +180,7 @@ class DiscordClient {
   _show_games = async (msg, args) => {
     let ret = '_ _\n\nAvailable Games'
 
-    const text = await this._mutex.runExclusive(() => {
+    const text = await this._mutex.runExclusive(async () => {
       if (args.id) {
         if (this._games[args.id] === undefined) {
           return `There is no game with ID ${args.id}`
