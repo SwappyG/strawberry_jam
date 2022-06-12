@@ -1,10 +1,11 @@
-import { Player } from "./strawberry_jam/Player.js/index.js"
-import { format_clue_tokens } from "./strawberry_jam/FormatOutput.js/index.js"
+import { Player } from "./Player.js"
+import { format_clue_tokens } from "./FormatOutput.js"
 import { format_score_breakdown } from "./Score.js"
 
 export class Players {
-  constructor() {
+  constructor(max_players) {
     this._players = []
+    this._max_players = max_players
   }
 
   id_exists = (id) => {
@@ -42,7 +43,7 @@ export class Players {
       return [false, `${name} has already joined`]
     }
 
-    if (this._players.length >= 6) {
+    if (this._players.length >= this._max_players) {
       return [false, `The game lobby is full`]
     }
 

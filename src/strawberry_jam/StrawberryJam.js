@@ -13,6 +13,12 @@ import { get_help_string } from './Help.js';
 import { char_array_to_int_array } from '../utils/String.js';
 
 export const make_strawberry_jam = (game_id, args, callbacks) => {
+  if (args.help) {
+    const word_len_msg = `- \`--word_length <length>\` or \`--w <length>\`, how long each player's word will be`
+    const max_players_msg = `- \`--max_players <num>\` how many players allowed in lobby, between 2 and 6`
+    return [false, `_ _\n\nRequired args:\n${word_len_msg}\n\nOptional args:\n${max_players_msg}`]
+  }
+
   if (!args.word_length && !args.w) {
     return [false, `Missing required arg \`--word_length\` or \`--w\``]
   }
@@ -28,8 +34,8 @@ export const make_strawberry_jam = (game_id, args, callbacks) => {
 
   const options = {
     'length_of_words': length_of_words,
+    'max_players': Math.min(6, Math.max(2, args?.max_players ?? 6)),
     'allow_single_player': args?.allow_single_player ?? false,
-    'max_players': args?.max_players ?? 6
   }
 
   return [true, new StrawberryJam(game_id, options, callbacks)]
@@ -51,8 +57,7 @@ export class StrawberryJam {
   }
 
   get_commands = () => {
-    return [
-      [["help", "h"], this._help],
+    const commands = [
       [["lobby", "l"], this._view_lobby],
       [["word", "w"], this._set_word],
       [["start", "s"], this._start_game],
@@ -68,6 +73,11 @@ export class StrawberryJam {
       [["vote", "V"], this._vote_for_score],
       [["_debug", "_d"], this._debug],
     ]
+
+    return commands.reduce((accum, [cmds, func]) => {
+      cmds.forEach(cmd => { accum[cmd] = func })
+      return accum
+    }, {})
   }
 
   format_for_lobby = async (detailed = false) => {
@@ -124,10 +134,16 @@ export class StrawberryJam {
     })
   }
 
+  help = async (player_id) => {
+    return this._mutex.runExclusive(() => {
+      return get_help_string(this._state, this._prefix, this._players.get_player(player_id))
+    })
+  }
+
   _reset = () => {
     this._deck = new Deck()
     this._state = STATE.CREATING_GAME
-    this._players = new Players()
+    this._players = new Players(this.options.max_players)
     this._public_piles = null
     this._bonus_cards = new BonusCards()
     this._clues = null
@@ -473,13 +489,6 @@ export class StrawberryJam {
       }
       this._msg_everyone(ret[0])
       this._msg_everyone(this._players.format_results())
-    })
-  }
-
-  _help = async (msg, args) => {
-    return this._mutex.runExclusive(() => {
-      const help_str = get_help_string(this._state, this._prefix, this._players.get_player(msg.author.id))
-      this._reply(msg, help_str)
     })
   }
 

@@ -52,13 +52,13 @@ const vote_msg = (prefix) => {
 
 const help_creating_game = (prefix, player) => {
   if (player === null) {
-    const main_msg = `_ _\n\nA game is being created!`
+    const main_msg = `A game is being created!`
     return `${main_msg}\n${lobby_msg(prefix)}\n`
   } else if (player.is_choosing_word()) {
-    const main_msg = `_ _\n\nYou've joined the game.`
+    const main_msg = `You've joined the game.`
     return `${main_msg}\n${word_msg(prefix)}\n${start_msg(prefix)}\n${lobby_msg(prefix)}\n`
   } else {
-    const main_msg = `_ _\n\nYou're ready to play!`
+    const main_msg = `You're ready to play!`
     return `${main_msg}\n${word_msg(prefix)}\n${start_msg(prefix)}\n${lobby_msg(prefix)}\n`
   }
 }
@@ -68,21 +68,21 @@ const help_waiting_for_hint = (prefix, player) => {
     return `_ _\n\nYou're not in the game. You can still do the following:\n${board_msg(prefix)}\n`
   }
 
-  const main_msg = `_ _\n\nThe game is in progress.`
+  const main_msg = `The game is in progress.`
   return `${main_msg}\n${board_msg(prefix)}\n${view_hints_msg(prefix)}\n${clue_msg(prefix)}\n`
 }
 
 const help_during_hint = (prefix, player) => {
   if (player === null) {
-    return `_ _\n\nYou're not in the game. You can still do the following:\n${board_msg(prefix)}\n`
+    return `You're not in the game. You can still do the following:\n${board_msg(prefix)}\n`
   }
 
   if (player.is_giving_hint()) {
-    return `_ _\n\nA hint given by you is currently active. Wait for everyone to respond to it\n`
+    return `A hint given by you is currently active. Wait for everyone to respond to it\n`
   }
 
   if (!player.is_responding_to_hint()) {
-    return `_ _\n\nA hint is active, wait for everyone else to respond.\n`
+    return `A hint is active, wait for everyone else to respond.\n`
   }
 
   const main_msg = `_ _\n\nA hint is active and waiting for your response.`
@@ -91,20 +91,20 @@ const help_during_hint = (prefix, player) => {
 
 const help_final_guess = (prefix, player) => {
   if (player === null) {
-    return `_ _\n\nYou're not in the game. You can still do the following:\n${board_msg(prefix)}\n`
+    return `You're not in the game. You can still do the following:\n${board_msg(prefix)}\n`
   }
 
   if (player.final_guess === null) {
-    const main_msg = `_ _\n\nNo clue tokens remain, make your final guess.`
+    const main_msg = `No clue tokens remain, make your final guess.`
     return `${main_msg}\n${board_msg(prefix)}\n${view_hints_msg(prefix)}\n${final_guess_msg(prefix)}`
   } else {
-    const main_msg = `_ _\n\nYou've made your final guess, wait for everyone else or change your guess.`
+    const main_msg = `You've made your final guess, wait for everyone else or change your guess.`
     return `${main_msg}\n${board_msg(prefix)}\n${view_hints_msg(prefix)}\n${final_guess_msg(prefix)}`
   }
 }
 
 const help_show_results = (prefix) => {
-  const main_msg = `_ _\n\nThe game is over.`
+  const main_msg = `The game is over.`
   return `${main_msg}\n${results_msg(prefix)}\n${vote_msg(prefix)}\n${end_msg(prefix)}`
 }
 
