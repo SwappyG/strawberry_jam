@@ -1,6 +1,6 @@
 import { PLAYER_STATE } from "./PlayerState.js"
 import { is_letters, shuffle_string } from "../utils/String.js"
-import { array_last } from "./utils/ArrayUtils.js"
+import { array_last } from "../utils/ArrayUtils.js"
 
 export class Player {
   constructor({ discord_id, name, length_of_words }) {
