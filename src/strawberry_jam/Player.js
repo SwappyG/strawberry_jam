@@ -3,8 +3,10 @@ import { is_letters, shuffle_string } from "../utils/String.js"
 import { array_last } from "../utils/ArrayUtils.js"
 
 export class Player {
-  constructor({ discord_id, name, length_of_words }) {
-    this.id = discord_id
+  constructor({ discord_user, name, length_of_words }) {
+    this.id = discord_user.id
+    this.discord_user = discord_user
+    this.send_cb
     this.name = name
     this.num = null
 
@@ -29,6 +31,10 @@ export class Player {
     this.votes = null
 
     this.state = PLAYER_STATE.CHOOSING_WORD
+  }
+
+  send = (text) => {
+    this.discord_user.send(text)
   }
 
   format_lobby_line = () => {

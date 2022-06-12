@@ -87,7 +87,7 @@ export class StrawberryJam {
         return summary
       }
       let ret = `${summary}`
-      for (const p of this._players.players()) {
+      for (const p of this._players.get()) {
         ret = `${ret}\n - ${p.name} / ${p.state}`
       }
       ret = ret + '\n'
@@ -106,31 +106,30 @@ export class StrawberryJam {
 
   get_player_names = async () => {
     return this._mutex.runExclusive(() => {
-      return this._players.get_player_names()
+      return this._players.get().map(p => { return p.name })
     })
   }
 
-  join = async (user_id, user_name) => {
+  join = async (discord_user) => {
     return this._mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return [false, `The game has already started, you are no longer able to join`]
       }
 
       return this._players.add_player({
-        discord_id: user_id,
-        name: user_name,
+        discord_id: discord_user,
         length_of_words: this.options.length_of_words
       })
     })
   }
 
-  exit = async (user_id) => {
+  exit = async (discord_user) => {
     return this._mutex.runExclusive(() => {
       if (this._state !== STATE.CREATING_GAME) {
         return [false, `Cannot leave before game exists or after its already running`]
       }
 
-      return this._players.remove_player(user_id)
+      return this._players.remove_player(discord_user)
     })
   }
 
@@ -241,7 +240,7 @@ export class StrawberryJam {
       this._clues = new Clues(this._players.num())
       this._state = STATE.WAITING_FOR_HINT
 
-      for (const player of this._players.players()) {
+      for (const player of this._players.get()) {
         this._msg_user(player.id, this._format_board(player.id))
       }
     })
@@ -285,7 +284,7 @@ export class StrawberryJam {
       }
       this._active_hint_indices = ret[0]
 
-      for (const player of this._players.players()) {
+      for (const player of this._players.get()) {
         let ret = format_hint(player, this._players, this._public_piles, this._bonus_cards, this._active_hint_indices)
         if (player.id === msg.author.id) {
           this._reply(msg, `you just sent the hint: \`${ret}\``, true)
@@ -336,7 +335,7 @@ export class StrawberryJam {
     this._active_hint_indices = []
 
     this._msg_everyone(`The current hint is over. Anyone can now give the next hint`)
-    for (const p of this._players.players()) {
+    for (const p of this._players.get()) {
       this._msg_user(p.id, this._format_board(p.id))
     }
     if (!this._clues.has_remaining()) {
@@ -525,7 +524,7 @@ export class StrawberryJam {
       }
 
       if (args.players) {
-        for (const p of this._players.players()) {
+        for (const p of this._players.get()) {
           this._reply(msg, `\`\`\`${JSON.stringify(p, null, 2)}\`\`\``)
         }
       }
