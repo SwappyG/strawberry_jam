@@ -1,13 +1,15 @@
+import { make_ret } from "../utils/Return.js"
+
 export class BonusCards {
   constructor() {
     this._cards = []
-    this._used = []
-    this._wild_used = false
+    this._users = []
+    this._wild_user = false
   }
 
   add = (letter) => {
     this._cards.push(letter)
-    this._used.push(false)
+    this._users.push(false)
   }
 
   remove_by_index = (deck, index) => {
@@ -16,53 +18,53 @@ export class BonusCards {
     }
     deck.discard(this._cards[index])
     this._cards.splice(index, 1)
-    this._used.splice(index, 1)
+    this._users.splice(index, 1)
   }
 
-  use = (index) => {
-    if (index > this._used.length) {
-      return [false, `Tried to use bonus card out of bounds. index ${index} > ${this._used.length}`]
+  use = (index, discord_user) => {
+    if (index > this._users.length) {
+      return make_ret(false, `Tried to use bonus card ${7 + index}, but the highest bonus card index is ${7 + this._users.length}`)
     }
-    if (this._used[index]) {
-      return [false, `Bonus card \`< ${index} > [${this._used[index]}]\` is already in use by another player`]
+    if (this._users[index]) {
+      return make_ret(false, `Bonus card \`< ${index} > [${this._users[index]}]\` is already in use by \`${this._users[index].username}\``)
     }
-    this._used[index] = true
-    return [true, this._cards[index]]
+    this._users[index] = discord_user
+    return make_ret(true, null, null, { letter: this._cards[index] })
   }
 
   unuse = (index) => {
-    if (index > this._used.length) {
-      throw new Error(`Tried to unuse bonus card out of bounds. index ${index} > ${this._used.length}`)
+    if (index > this._users.length) {
+      throw new Error(`Tried to unuse bonus card out of bounds. index ${index} > ${this._users.length}`)
     }
-    if (!this._used[index]) {
+    if (this._users[index] !== null) {
       throw new Error(`Tried to unuse card that was already not used, index ${index}`)
     }
-    this._used[index] = false
-    return [true, `Bonus card \`< ${index} > [${this._used[index]}]\` is no longer being used`]
+    this._users[index] = null
+    return make_ret(true, `Bonus card \`< ${index} > [${this._users[index]}]\` is no longer being used`)
   }
 
-  use_wild = () => {
-    if (this._wild_used) {
-      return [false, `Wild card \`[*]\` is already in use by another player`]
+  use_wild = (discord_user) => {
+    if (this._wild_user !== null) {
+      return make_ret(false, `Wild card \`[*]\` is already in use by \`${this._wild_user.username}\``)
     }
-    this._wild_used = true
-    return [true, `Wild card \`[*]\` is now being used`]
+    this._wild_user = discord_user
+    return make_ret(true, `Wild card \`[*]\` is now being used`)
   }
 
   unuse_wild = () => {
-    if (!this._wild_used) {
+    if (this._wild_user !== null) {
       throw new Error(`Tried to unuse wild card before it was used`)
     }
-    this._wild_used = false
-    return [true, `Wild card \`[*]\` is no longer being used`]
+    this._wild_user = null
+    return make_ret(true, `Wild card \`[*]\` is no longer being used`)
   }
 
-  is_wild_used = () => {
-    return this._wild_used
+  wild_user = () => {
+    return this._wild_user
   }
 
-  is_used = (index) => {
-    return this._used[index]
+  users = () => {
+    return this._users
   }
 
   num = () => {
@@ -70,7 +72,7 @@ export class BonusCards {
   }
 
   get = (index) => {
-    return [this._cards[index], this._used[index]]
+    return [this._cards[index], this._users[index]]
   }
 
   getIndex = (letter) => {
@@ -83,9 +85,9 @@ export class BonusCards {
     for (const bonus_card_index of unique_bonus_cards_indices) {
       const ii = bonus_card_index - 7
       consumed_letters.push(this._cards[ii])
-      this.remove_by_index(ii)
+      this.remove_by_index(deck, ii)
     }
-    return [true, consumed_letters]
+    return make_ret(true, null, null, { consumed_letters })
   }
 
   format_bonus_card_for_board = (ii, name_len) => {
@@ -93,7 +95,7 @@ export class BonusCards {
     const name = 'bonus'
     const name_spacer = `${' '.repeat(name_len - name.length)}`
     const card = `[${this._cards[ii].toUpperCase()}]`
-    const is_used = `${this._used[ii] ? '/ IS_USED' : `/ IS_AVAIL`}`
+    const is_used = `${this._users[ii] ? '/ IS_USED' : `/ IS_AVAIL`}`
     return `${index} ${name}${name_spacer}${card}    ${is_used}`
   }
 
@@ -110,7 +112,7 @@ export class BonusCards {
     const name = 'wildcard'
     const name_spacer = `${' '.repeat(name_len - name.length)}`
     const card = `[*]`
-    const is_used = `${this._wild_used ? '/ IS_USED' : `/ IS_AVAIL`}`
+    const is_used = `${this._wild_user ? '/ IS_USED' : `/ IS_AVAIL`}`
     return `${index} ${name}${name_spacer}${card}    ${is_used}`
   }
 }
