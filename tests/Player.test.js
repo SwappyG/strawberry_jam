@@ -130,7 +130,7 @@ describe('Player Tests', () => {
       expect(player.assigned_word_unshuffled).toBe('hello')
     }
 
-    expect(player.get_active_letter()).toBe(player.assigned_word[0])
+    expect(player.get_active_letter()).toStrictEqual([player.assigned_word[0], 0])
     expect(player.get_active_hint()).toBe(null)
 
     player.give_hint()

@@ -45,23 +45,6 @@ export class GameData {
     this.game = null
   }
 
-  // join_game = async (discord_user) => {
-  //   const { success, reply_msg, dm_msg, ...rest } = await this.game.join(discord_user)
-  //   if (!success) {
-  //     return { success, reply_msg }
-  //   }
-
-  //   return make_ret(true)
-  // }
-
-  // exit_game = (discord_user) => {
-  //   const { success, reply_msg, dm_msg, ...rest } = this.game.exit(discord_user)
-  //   if (!success) {
-  //     return { success, reply_msg }
-  //   }
-  //   return make_ret(true)
-  // }
-
   format_for_lobby = async (detailed = false) => {
     if (detailed) {
       return `_ _\n\nLobby Info for \`${this.id}\`:\nCreated By: ${this.creator_name}\n${await this.game.format_for_lobby(true)}`

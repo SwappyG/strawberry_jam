@@ -33,7 +33,7 @@ export const format_board = (players, public_piles, bonus_cards, clues, messenge
 
   let ret = `\n\n`
   const player = players.get_player(messenger_id)
-  const active_hint = player.get_active_hint()
+  const active_hint = player?.get_active_hint() ?? null
   if (active_hint !== null) {
     ret = `${ret}Active Hint: ${active_hint}\n\n`
   }
@@ -63,7 +63,7 @@ export const format_hint = (player, players, public_piles, bonus_cards, hint_ind
     } else if (index === player.num) {
       ret = ret + '?'
     } else if (index <= players.num()) {
-      ret = ret + players.get_player_active_letter_by_num(index).toUpperCase()
+      ret = ret + players.get_player_active_letter_by_num(index)[0].toUpperCase()
     } else if (index < 7) {
       ret = ret + public_piles.top(index - players.num() - 1).toUpperCase()
     } else if (index - 7 < bonus_cards.num()) {

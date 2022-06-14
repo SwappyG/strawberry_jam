@@ -130,7 +130,8 @@ export class StrawberryJam {
       public_pile_num_cards: this._public_piles._piles.map(pile => pile.length),
       public_top_cards: this._public_piles._piles.map(pile => pile[0]),
       player_states: [...this._players._players].map(([id, player]) => player.state),
-      player_active_letters: [...this._players._players].map(([id, player]) => player.get_active_letter())
+      player_active_letters: [...this._players._players].map(([id, player]) => player.get_active_letter()),
+      player_votes: [...this._players._players].map(([id, player]) => player.votes)
     }
   }
 
@@ -475,7 +476,7 @@ export class StrawberryJam {
         return make_ret(false, `You need to specify the player indices for your vote. Call help for syntax.`)
       }
       const votes = args["_"][1]
-      const { success, reply_msg, dm_msg, ...rest } = this._players.add_votes(discord_user, votes)
+      const { success, reply_msg, dm_msg, ...rest } = this._players.add_votes(discord_user.id, votes)
       if (!success) {
         return { success, reply_msg }
       }

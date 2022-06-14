@@ -153,7 +153,6 @@ describe('StrawberryJam Tests', () => {
     await sjam.join(user_2)
 
     const cmds = sjam.get_commands()
-    console.log(cmds)
     {
       const { success, ...rest } = await cmds["e"]({ discord_user: user_1, args: { _: ["e"] } })
       expect(success).toBe(true) // end game always works 
@@ -179,7 +178,6 @@ describe('StrawberryJam Tests', () => {
     }
     {
       const { success, ...rest } = await cmds["s"]({ discord_user: user_1, args: { _: ["s"] } })
-      console.log(rest)
       expect(success).toBe(true)
     }
 
@@ -321,7 +319,6 @@ describe('StrawberryJam Tests', () => {
 
     {
       const game_state = sjam.game_state()
-      console.log(game_state)
       const { success, ...rest } = await cmds["c"]({ discord_user: user_1, args: { _: ["c", "0,0,0,0"] } })
       expect(success).toBe(false) // not more clues remaining
     }
@@ -335,9 +332,9 @@ describe('StrawberryJam Tests', () => {
     const user_2 = new DiscordUserMock()
     const user_3 = new DiscordUserMock()
 
-    console.log(user_1.username)
-    console.log(user_2.username)
-    console.log(user_3.username)
+    user_1.username
+    user_2.username
+    user_3.username
     console.log(await sjam.join(user_1))
     console.log(await sjam.join(user_2))
     console.log(await sjam.join(user_3))
@@ -359,11 +356,10 @@ describe('StrawberryJam Tests', () => {
     await run_one_round('0,2,3,4,5,6')
     await run_one_round('0,2,3,4,5,6')
 
-
     const generate_bonus_card = async () => {
       const game_state = sjam.game_state()
       console.log(await cmds["c"]({ discord_user: user_1, args: { _: ["c", "0,2,3,4,5,6"] } }))
-      console.log(await cmds["g"]({ discord_user: user_2, args: { _: ["g", game_state.player_active_letters[1]] } }))
+      console.log(await cmds["g"]({ discord_user: user_2, args: { _: ["g", game_state.player_active_letters[1][0]] } }))
       console.log(await cmds["p"]({ discord_user: user_3, args: { _: ["p"] } }))
     }
 
@@ -371,8 +367,6 @@ describe('StrawberryJam Tests', () => {
     while (sjam.game_state().remaining_clues > 0) {
       await generate_bonus_card()
     }
-
-    console.log(sjam.game_state())
 
     {
       const { success, ...rest } = await cmds["f"]({ discord_user: user_1, args: { _: ["f", "1,1,2,3,4"] } })
@@ -441,7 +435,7 @@ describe('StrawberryJam Tests', () => {
     const generate_bonus_card = async () => {
       const game_state = sjam.game_state()
       console.log(await cmds["c"]({ discord_user: user_1, args: { _: ["c", "0,2,3,4,5,6"] } }))
-      console.log(await cmds["g"]({ discord_user: user_2, args: { _: ["g", game_state.player_active_letters[1]] } }))
+      console.log(await cmds["g"]({ discord_user: user_2, args: { _: ["g", game_state.player_active_letters[1][0]] } }))
     }
 
     await generate_bonus_card()
@@ -569,6 +563,89 @@ describe('StrawberryJam Tests', () => {
     {
       const { success, ...rest } = await cmds["a"]({ discord_user: user_2, args: { _: ["a", "f"] } })
       expect(success).toBe(false) // already responded to hint
+    }
+  })
+
+  test("StrawberryJam Vote", async () => {
+    const sjam = make_strawberry_jam('ABCD', { w: 5, max_players: 2 }, '?').game
+    const cmds = sjam.get_commands()
+
+    const user_1 = new DiscordUserMock()
+    const user_2 = new DiscordUserMock()
+    const user_3 = new DiscordUserMock()
+
+    console.log(await sjam.join(user_1))
+    console.log(await sjam.join(user_2))
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(false) // can't vote till results
+    }
+
+    console.log(await cmds["w"]({ discord_user: user_1, args: { _: ["w", "hello"], is_dm: true } }))
+    console.log(await cmds["w"]({ discord_user: user_2, args: { _: ["w", "kayak"], is_dm: true } }))
+    console.log(await cmds["w"]({ discord_user: user_3, args: { _: ["w", "cargo"], is_dm: true } }))
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(false) // can't vote till results
+    }
+
+    console.log(await cmds["s"]({ discord_user: user_1, args: { _: ["s"] } }))
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(false) // can't vote till results
+    }
+
+    // move to final guess state
+    let game_state = sjam.game_state()
+    while (game_state.remaining_clues > 0) {
+      console.log(game_state)
+      console.log(await cmds["c"]({ discord_user: user_1, args: { _: ["c", '0,2,3,4,5,6'] } }))
+      console.log(await cmds["a"]({ discord_user: user_2, args: { _: ["a", "a"] } }))
+      console.log(await cmds["g"]({ discord_user: user_2, args: { _: ["g", game_state.player_active_letters[1][0]] } }))
+      game_state = sjam.game_state()
+    }
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(false) // can't vote till results
+    }
+
+    console.log(await cmds["f"]({ discord_user: user_1, args: { _: ["f", "3,2,4,1,5"] } }))
+    console.log(await cmds["f"]({ discord_user: user_2, args: { _: ["f", "3,2,4,1,5"] } }))
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2,3"] } })
+      expect(success).toBe(false) // index out of bounds
+    }
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_3, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(false) // user not in game
+    }
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "a,b,32"] } })
+      expect(success).toBe(false) // bad indices
+    }
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "0,1"] } })
+      expect(success).toBe(false) // index out of bounds
+    }
+
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_1, args: { _: ["V", "1,2"] } })
+      expect(success).toBe(true)
+      const game_state = sjam.game_state()
+      expect(game_state.player_votes[0]).toStrictEqual([1, 2])
+      expect(game_state.player_votes[1]).toStrictEqual(null)
+    }
+    {
+      const { success, ...rest } = await cmds["V"]({ discord_user: user_2, args: { _: ["V", "1"] } })
+      expect(success).toBe(true)
+      const game_state = sjam.game_state()
+      expect(game_state.player_votes[0]).toStrictEqual([1, 2])
+      expect(game_state.player_votes[1]).toStrictEqual([1])
     }
   })
 })

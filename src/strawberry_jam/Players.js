@@ -123,10 +123,6 @@ export class Players {
     }, 0)
   }
 
-  // get_players_with_no_word = () => {
-  //   return [...this._players].filter(([id, p]) => p.is_waiting_for_assigned_word()).map(p => p.name)
-  // }
-
   get_player_active_letter_by_num = (num) => {
     for (const [id, player] of this._players) {
       if (player.num === num) {

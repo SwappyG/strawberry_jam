@@ -40,17 +40,6 @@ export class BonusCards {
     this._users.splice(index, 1)
   }
 
-  // use = (index, discord_user) => {
-  //   if (index > this._users.length) {
-  //     return make_ret(false, `Tried to use bonus card ${7 + index}, but the highest bonus card index is ${7 + this._users.length}`)
-  //   }
-  //   if (this._users[index]) {
-  //     return make_ret(false, `Bonus card \`< ${index} > [${this._users[index]}]\` is already in use by \`${this._users[index].username}\``)
-  //   }
-  //   this._users[index] = discord_user
-  //   return make_ret(true, null, null, { letter: this._cards[index] })
-  // }
-
   assign_to_user = (indices, wild, discord_user) => {
     const used_by_user_before = this._unuse_by_user(discord_user)
 
@@ -86,33 +75,6 @@ export class BonusCards {
     return make_ret(true)
   }
 
-  // unuse = (index) => {
-  //   if (index > this._users.length) {
-  //     throw new Error(`Tried to unuse bonus card out of bounds. index ${index} > ${this._users.length}`)
-  //   }
-  //   if (this._users[index] !== null) {
-  //     throw new Error(`Tried to unuse card that was already not used, index ${index}`)
-  //   }
-  //   this._users[index] = null
-  //   return make_ret(true, `Bonus card \`< ${index} > [${this._users[index]}]\` is no longer being used`)
-  // }
-
-  // use_wild = (discord_user) => {
-  //   if (this._wild_user !== null) {
-  //     return make_ret(false, `Wild card \`[*]\` is already in use by \`${this._wild_user.username}\``)
-  //   }
-  //   this._wild_user = discord_user
-  //   return make_ret(true, `Wild card \`[*]\` is now being used`)
-  // }
-
-  // unuse_wild = () => {
-  //   if (this._wild_user !== null) {
-  //     throw new Error(`Tried to unuse wild card before it was used`)
-  //   }
-  //   this._wild_user = null
-  //   return make_ret(true, `Wild card \`[*]\` is no longer being used`)
-  // }
-
   wild_user = () => {
     return this._wild_user
   }
@@ -131,10 +93,6 @@ export class BonusCards {
     }
     return { card: this._cards[index], user: this._users[index] }
   }
-
-  // getIndex = (letter) => {
-  //   return this._cards.findIndex(c => c === letter)
-  // }
 
   update = (deck, hint_indices) => {
     const unique_bonus_cards_indices = ([...new Set(hint_indices)].filter(h => h > 6)).map(ii => ii - 7)

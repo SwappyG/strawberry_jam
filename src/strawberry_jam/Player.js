@@ -3,7 +3,6 @@ import { is_letters, shuffle_string } from "../utils/String.js"
 import { array_last } from "../utils/ArrayUtils.js"
 
 import { make_ret } from "../utils/Return.js"
-
 export class Player {
   constructor({ discord_user, length_of_words }) {
     this.id = discord_user.id
@@ -83,8 +82,7 @@ export class Player {
   }
 
   get_active_letter = () => {
-    // console.log(this.assigned_word[this.letter_index])
-    return this.on_bonus_letter ? this.bonus_letter : this.assigned_word[this.letter_index]
+    return [this.on_bonus_letter ? this.bonus_letter : this.assigned_word[this.letter_index], this.letter_index]
   }
 
   get_active_hint = () => {

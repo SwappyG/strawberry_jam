@@ -79,7 +79,7 @@ class DiscordClient {
     await this._mutex.runExclusive(async () => {
       this._games[game_id] = new GameData({
         'id': game_id,
-        'creator': msg.author.username,
+        'creator_name': msg.author.username,
         'creator_id': msg.author.id,
         'max_players': args?.max_players ?? 6,
         'is_heroku': this._is_running_on_heroku,
