@@ -1,4 +1,5 @@
 import fetch from "node-fetch"
+import { make_ret } from "../utils/Return.js"
 
 const _HEROKU_ADDRESS = "http://swappy-jam.herokuapp.com"
 const _HEROKU_PING_PERIOD_IN_MS = 15/*min*/ * 60/*secs/min*/ * 1000 /*msec/sec*/
@@ -13,7 +14,6 @@ export class GameData {
     this.commands = commands
     this.error_callback = error_callback
 
-    this.users = []
     this.is_idle = false
     this.last_cmd_timestamp = Date.now()
 
@@ -30,62 +30,42 @@ export class GameData {
           })
       }
       if (Date.now() - this.last_cmd_timestamp > _HEROKU_PING_PERIOD_IN_MS) {
-
-
         this.end_game(`Game \`this.id\`: No msgs received in the last ${_HEROKU_PING_PERIOD_IN_MS / 1000 / 60} minutes.`)
-
-
       }
     }, _HEROKU_PING_PERIOD_IN_MS)
   }
 
   end_game = async (reason) => {
     if (reason) {
-      this.msg_everyone_in_game(game_id, reason)
+      this.game.msg_everyone(reason)
     }
     clearInterval(this.watchdog)
     this.watchdog = null
     this.is_idle = true
     this.game = null
-    this.users = []
   }
 
-  join_game = async (discord_user) => {
-    const [success, ...ret] = await this.game.join(discord_user.id, discord_user.username)
-    if (!success) {
-      return [success, ...ret]
-    }
+  // join_game = async (discord_user) => {
+  //   const { success, reply_msg, dm_msg, ...rest } = await this.game.join(discord_user)
+  //   if (!success) {
+  //     return { success, reply_msg }
+  //   }
 
-    this.users.push(discord_user)
-    return [true]
-  }
+  //   return make_ret(true)
+  // }
 
-  exit_game = (discord_user) => {
-    const [success, ...ret] = this.game.exit(discord_user.id)
-    if (!success) {
-      return this.log_and_reply(msg, ret[0])
-    }
-    const index = this.users.findIndex(user => { user.id === discord_user.id })
-    if (index !== -1) {
-      throw new Error(`Game \`${this.id}\`: User ${discord_user.username} was removed from game, but didn't exist in \`GameData\`.`)
-    }
-    this.users.splice(index, 1)
-    return [true]
-  }
-
-  msg_everyone = (text) => {
-    console.log(text)
-    for (const user of this.users) {
-      user.send(text)
-    }
-  }
+  // exit_game = (discord_user) => {
+  //   const { success, reply_msg, dm_msg, ...rest } = this.game.exit(discord_user)
+  //   if (!success) {
+  //     return { success, reply_msg }
+  //   }
+  //   return make_ret(true)
+  // }
 
   format_for_lobby = async (detailed = false) => {
     if (detailed) {
-      return `_ _\n\nLobby Info for \`${this.id}\`:\nCreated By: ${this.creator}\n${await this.game.format_for_lobby(true)}`
+      return `_ _\n\nLobby Info for \`${this.id}\`:\nCreated By: ${this.creator_name}\n${await this.game.format_for_lobby(true)}`
     }
-    return `\` - [${this.id}] / Created by ${this.creator} / ${await this.game.format_for_lobby()}\``
+    return `\` - [${this.id}] / Created by ${this.creator_name} / ${await this.game.format_for_lobby()}\``
   }
-
-
 }

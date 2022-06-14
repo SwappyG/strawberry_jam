@@ -51,7 +51,6 @@ export const format_board = (players, public_piles, bonus_cards, clues, messenge
   ret = `${ret}\nRemaining Clues / ${format_clue_tokens(clues._remaining)} /`
   ret = `${ret}\nLocked Clues    / ${format_clue_tokens(clues._locked)} /`
 
-  console.log(ret)
   return `\`\`\`${ret}\`\`\``
 }
 
@@ -66,9 +65,9 @@ export const format_hint = (player, players, public_piles, bonus_cards, hint_ind
     } else if (index <= players.num()) {
       ret = ret + players.get_player_active_letter_by_num(index).toUpperCase()
     } else if (index < 7) {
-      ret = ret + public_piles.top(index, players.num()).toUpperCase()
+      ret = ret + public_piles.top(index - players.num() - 1).toUpperCase()
     } else if (index - 7 < bonus_cards.num()) {
-      ret = ret + bonus_cards.get(index - 7)[0].toUpperCase()
+      ret = ret + bonus_cards.get(index - 7).card.toUpperCase()
     } else {
       throw new Error(`Index passed to format hint out of bounds.\nNum Players: ${players.length}\nNum Public Piles: ${public_piles.length}\nNum Bonus Cards: ${bonus_cards.length}\nIndex: ${index}`)
     }

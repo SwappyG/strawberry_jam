@@ -29,15 +29,22 @@ export class Deck {
   }
 
   cards = () => {
-    return this._cards
+    return this._cards.slice()
+  }
+
+  discarded_cards = () => {
+    return this._discard
   }
 
   size = () => {
     return this._cards.length
   }
 
+  discard_size = () => {
+    return this._discard.length
+  }
+
   copy = () => {
-    console.log(this._cards)
     return new Deck(this._cards.slice())
   }
 
@@ -45,7 +52,7 @@ export class Deck {
     if (!Array.isArray(cards)) {
       cards = [cards]
     }
-    this._discard.concat(cards)
+    this._discard = this._discard.concat(cards)
   }
 
   return_cards = (cards) => {
@@ -54,7 +61,10 @@ export class Deck {
 
   draw_cards = (num) => {
     if (num > this._cards.length - 1) {
-      this._cards = this._discard
+      this._cards = this._cards.concat(this._discard)
+      if (num > this._cards.length - 1) {
+        throw new Error(`Tried to draw more cards than available in deck`)
+      }
       this._discard = []
     }
 
