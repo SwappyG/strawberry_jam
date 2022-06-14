@@ -11,6 +11,14 @@ export class Clues {
     }
   }
 
+  remaining = () => {
+    return this._remaining
+  }
+
+  locked = () => {
+    return this._locked
+  }
+
   increment = (amount = 1) => {
     this._remaining = this._remaining + amount
   }

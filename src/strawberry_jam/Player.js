@@ -35,7 +35,6 @@ export class Player {
   }
 
   send = (text) => {
-    console.log(this.discord_user)
     this.discord_user.send(text)
   }
 
@@ -43,7 +42,7 @@ export class Player {
     if (!this.is_waiting_for_assigned_word() && !this.is_choosing_word()) {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. A player is trying to set a word after game has started`)
     }
-    console.log(`${word}, ${this.length_of_words}`)
+
     if (typeof word !== 'string' || !is_letters(word)) {
       return make_ret(false, `Your word should be made of letters only`)
     }
@@ -220,51 +219,49 @@ export class Player {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. ${this.name} tried to make a final guess while not READY`)
     }
 
-    const entries = indices_str.toString().split(',')
+    const is_bonus = (e) => e[0].toLowerCase() === 'b'
+    const entries = indices_str.toString().split(',').map((e) => {
+      return is_bonus(e) ? [parseInt(e.slice(1)), true] : [parseInt(e), false]
+    })
+
+    if (entries.some(([e, is_bonus]) => {
+      return isNaN(e) ||
+        (!is_bonus && (e < 0 || e > this.length_of_words)) ||
+        (is_bonus && (e < 7 || e > 6 + bonus_cards.num()))
+    })) {
+      return make_ret(false, `Your indices must be:\n - integers.\n - \`0\` for wild card.\n - Between \`1\` and \`${this.length_of_words}\` to reorder your letters.\n - \`b<int>\` for bonus cards`)
+    }
+
+    const non_bonus_indices = entries.filter(([e, is_bonus]) => !is_bonus && e !== 0).map(([e, is_bonus]) => e)
+    const bonus_indices = entries.filter(([e, is_bonus]) => is_bonus).map(([e, is_bonus]) => e - 7)
+
     if (entries.length < this.length_of_words) {
       return make_ret(false, `Your guess must be at equal to or larger than your assigned word, (ie, \`${this.length_of_words}\` letters or more)`)
     }
 
-    if (entries.length !== [...new Set(entries)].length) {
+    if (entries.length !== [...new Set(entries.map(([e, is_bonus]) => e))].length) {
       return make_ret(false, `You can't have duplicate indices when reshuffling your final guess`)
     }
 
-    const non_bonus_indices = entries.filter(e => e[0] !== 'b')
-    if (entries.includes(0) && (non_bonus_indices.length === this.length_of_words)) {
+    const wild_used = entries.some(([e, is_bonus]) => e === 0)
+    console.log(non_bonus_indices)
+    console.log(this.length_of_words)
+    if (wild_used && (non_bonus_indices.length !== this.length_of_words - 1)) {
       return make_ret(false, `If you use a wild card \`[*]\`, then it must *replace* one of your original letters`)
     }
 
+    const { success, reply_msg } = bonus_cards.assign_to_user(bonus_indices, wild_used, this.discord_user)
+    if (!success) {
+      return { success, reply_msg }
+    }
     let guess = []
-    let bonus_cards_used = []
-    let wild_used = false
+    let bonus_cards_used = bonus_indices.map(ii => bonus_cards.get(ii).card)
 
-    for (let entry of entries) {
-      const is_bonus_index = entry[0].toLowerCase() === 'b'
-      const index = parseInt(is_bonus_index ? entry.slice(1) : entry)
-      if (isNaN(index)) {
-        return make_ret(false, `Your indices must be integers`)
-      }
-      if (index < 0) {
-        return make_ret(false, `Your indices cannot be negative`)
-      }
-      if (!is_bonus_index && (index > this.length_of_words)) {
-        return make_ret(false, `Your non-bonus indices cannot be greater than the number of letters you were assigned`)
-      }
-
+    for (let [index, is_bonus_index] of entries) {
       if (index === 0) {
-        const { success, reply_msg, dm_msg, ...rest } = bonus_cards.use_wild()
-        if (!success) {
-          return { success, reply_msg }
-        }
         guess.push('*')
-        wild_used = true
       } else if (is_bonus_index) {
-        const { success, reply_msg, dm_msg, ...rest } = bonus_cards.use(index - 7)
-        if (!success) {
-          return { success, reply_msg }
-        }
-        guess.push(rest.letter)
-        bonus_cards_used.push(rest.letter)
+        guess.push(bonus_cards.get(index - 7))
       } else {
         guess.push(this.assigned_word[index - 1])
       }
@@ -274,7 +271,6 @@ export class Player {
   }
 
   format_cards = (is_hidden = false) => {
-    console.log(`is_hidden: ${is_hidden}`)
     const word_len = this.assigned_word.length
 
     let main_cards = ('[ ]'.repeat(word_len)).split('')

@@ -41,7 +41,7 @@ export class Players {
 
   assign_word_to_all_players = (discord_user, options) => {
     if (!this._players.has(discord_user.id)) {
-      return make_ret(false, `\`${discord_user.username}\` was not in the game`)
+      return make_ret(false, `You aren't in the game, you can't assign words`)
     }
 
     const num_players = this.num()
@@ -50,7 +50,6 @@ export class Players {
     }
 
     const players_that_havent_set_word = [...this._players].filter(([k, p]) => p.is_choosing_word()).map(([k, p]) => p.name)
-    console.log(players_that_havent_set_word)
     if (players_that_havent_set_word.length > 0) {
       return make_ret(false, `_ _\n\nThe following players haven't selected a word \`\`\`${players_that_havent_set_word.map(p => `\n - ${p}`)}\`\`\``)
     }
@@ -61,7 +60,6 @@ export class Players {
       player.assign_word(prev_word, ii)
       ii = ii + 1
       prev_word = player.word.slice()
-      console.log(`assigned word to ${player.name}`)
     }
 
     return make_ret(true)
@@ -75,7 +73,7 @@ export class Players {
 
     const vote_indices = votes.toString().split(',')
     if (vote_indices.length !== [...new Set(vote_indices)].length) {
-      return make_ret(false, `You can't have duplicate indices when for your votes`)
+      return make_ret(false, `You can't have duplicate indices for your votes`)
     }
 
     const votes_int = vote_indices.map(v => parseInt(v))
@@ -88,7 +86,7 @@ export class Players {
     }
 
     player.votes = votes_int
-    const names = votes_int.map(num => [...this._players].find(p => p.num === num).name)
+    const names = votes_int.map(num => [...this._players].find(([id, p]) => p.num === num).name)
     return make_ret(true, null, null, { yes_vote_names: names })
   }
 
@@ -125,9 +123,9 @@ export class Players {
     }, 0)
   }
 
-  get_players_with_no_word = () => {
-    return [...this._players].filter(([id, p]) => p.is_waiting_for_assigned_word()).map(p => p.name)
-  }
+  // get_players_with_no_word = () => {
+  //   return [...this._players].filter(([id, p]) => p.is_waiting_for_assigned_word()).map(p => p.name)
+  // }
 
   get_player_active_letter_by_num = (num) => {
     for (const [id, player] of this._players) {
@@ -142,7 +140,7 @@ export class Players {
     return [...this._players].map(([id, p]) => p.hints_given)
   }
 
-  all_players_done_responding_to_hint = () => {
+  all_players_done_responded_to_hint = () => {
     return [...this._players].every(([id, p]) => p.is_ready() || p.is_giving_hint())
   }
 
@@ -183,7 +181,6 @@ export class Players {
     const len_names = this.get_max_char_of_names() + 4
     let ret = ''
     for (const [ii, player] of this._players) {
-      console.log(`discord_id: ${discord_id}, player id: ${player.id}`)
       const cards = player.format_cards(discord_id === player.id)
       const name = player.name + ' '.repeat(len_names - player.name.length)
       const num = `< ${player.num !== null ? player.num : '?'} >`

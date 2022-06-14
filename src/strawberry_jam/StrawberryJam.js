@@ -83,8 +83,6 @@ export class StrawberryJam {
         return make_ret(false, `The game has already started, you are no longer able to join`)
       }
 
-      console.log(discord_user)
-
       const { success, reply_msg, dm_msg, ...rest } = this._players.add_player({
         discord_user, length_of_words: this.options.length_of_words
       })
@@ -117,6 +115,23 @@ export class StrawberryJam {
     return await this._mutex.runExclusive(async () => {
       return get_help_string(this._state, this._prefix, this._players.get_player(player_id))
     })
+  }
+
+  game_state = () => {
+    return {
+      id: this.id,
+      options: this.options,
+      state: this._state,
+      num_players: this._players.num(),
+      bonus_cards: this._bonus_cards._cards,
+      remaining_clues: this._clues.remaining(),
+      locked_clues: this._clues.locked(),
+      public_clues: this._public_piles._clues,
+      public_pile_num_cards: this._public_piles._piles.map(pile => pile.length),
+      public_top_cards: this._public_piles._piles.map(pile => pile[0]),
+      player_states: [...this._players._players].map(([id, player]) => player.state),
+      player_active_letters: [...this._players._players].map(([id, player]) => player.get_active_letter())
+    }
   }
 
   format_for_lobby = async (detailed = false) => {
@@ -166,8 +181,6 @@ export class StrawberryJam {
       return make_ret(false, `You can't give a hint that includes your own letter`)
     }
 
-    console.log(indices_chars)
-    console.log(indices)
     return make_ret(true, null, null, { indices })
   }
 
@@ -178,7 +191,7 @@ export class StrawberryJam {
   }
 
   _set_word = async ({ discord_user, args }) => {
-    const ret = await this._mutex.runExclusive(async () => {
+    return await this._mutex.runExclusive(async () => {
       if (this._state !== STATE.CREATING_GAME) {
         return make_ret(false, `Cannot set word after game has already started`)
       }
@@ -202,8 +215,6 @@ export class StrawberryJam {
       this._deck = rest.deck
       return make_ret(true, `Your word has been set to \`${word.toUpperCase()}\``)
     })
-    console.log(ret)
-    return ret
   }
 
   _start_game = async ({ discord_user, args }) => {
@@ -227,7 +238,7 @@ export class StrawberryJam {
   }
 
   _end_game = async ({ discord_user, args }) => {
-    await this._mutex.runExclusive(() => {
+    return await this._mutex.runExclusive(async () => {
       this._players.msg_everyone(`\`${discord_user.username}\` has ended the game`)
       this._reset()
       return make_ret(true, `You've ended the game`)
@@ -251,15 +262,15 @@ export class StrawberryJam {
         return make_ret(false, `Cannot give a hint, either game hasn't started or another hint is in progress`)
       }
 
+      const hint_giving_player = this._players.get_player(discord_user.id)
+      if (hint_giving_player === null) {
+        return make_ret(false, `You can't give a clue if you're not in the game`)
+      }
+
       if (args["_"].length < 2) {
         return make_ret(false, `You need to specify your hint. Call help for syntax.`)
       }
       const hint = args["_"][1]
-
-      const hint_giving_player = this._players.get_player(discord_user.id)
-      if (hint_giving_player === null) {
-        return (false, `You can't give a clue if you're not in the game`)
-      }
 
       const { success, reply_msg, dm_msg, ...rest } = this._parse_hint_indices(hint, hint_giving_player.num)
       if (!success) {
@@ -285,7 +296,7 @@ export class StrawberryJam {
       this._state = STATE.DURING_HINT
       this._send_board_to_everyone()
 
-      if (this._players.all_players_done_responding_to_hint()) {
+      if (this._players.all_players_done_responded_to_hint()) {
         this._end_round()
       }
 
@@ -310,7 +321,7 @@ export class StrawberryJam {
   }
 
   _end_round = () => {
-    const depleted_piles = this._public_piles.update(this._deck, this._active_hint_indices, this._players.num())
+    const depleted_piles = this._public_piles.update(this._deck, this._active_hint_indices)
     for (const p of depleted_piles) {
       this._clues.increment()
       this._players.msg_everyone(`Pile \`< ${p} >\` has been depleted, a new clue token was unlocked`)
@@ -355,7 +366,7 @@ export class StrawberryJam {
         this._players.msg_everyone(`\`${discord_user.username}\` is advancing to the next letter`)
       }
 
-      if (this._players.all_players_done_responding_to_hint()) {
+      if (this._players.all_players_done_responded_to_hint()) {
         this._end_round()
       }
       return make_ret(true)
@@ -376,7 +387,7 @@ export class StrawberryJam {
       }
 
       this._players.msg_everyone(`\`${discord_user.username}\` is passing this round`)
-      if (this._players.all_players_done_responding_to_hint()) {
+      if (this._players.all_players_done_responded_to_hint()) {
         this._end_round()
       }
       return make_ret(true)
@@ -408,7 +419,7 @@ export class StrawberryJam {
         this._players.msg_everyone(`\`${discord_user.username}\` did not guess their letter.`)
       }
 
-      if (this._players.all_players_done_responding_to_hint()) {
+      if (this._players.all_players_done_responded_to_hint()) {
         this._end_round()
       }
       return make_ret(true)
