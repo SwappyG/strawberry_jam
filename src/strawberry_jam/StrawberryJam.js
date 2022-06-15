@@ -157,6 +157,12 @@ export class StrawberryJam {
     this._players.msg_everyone(text)
   }
 
+  get_users = async () => {
+    return await this._mutex.runExclusive(async () => {
+      return [...this._players._players].map(([id, player]) => player.discord_user)
+    })
+  }
+
   _reset = () => {
     this._deck = new Deck()
     this._state = STATE.CREATING_GAME

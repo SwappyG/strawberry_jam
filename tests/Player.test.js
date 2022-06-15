@@ -238,8 +238,8 @@ describe('Player Tests', () => {
     {
       player.assign_word('hello', 1)
       expect(player.num).toBe(1)
-      expect(player.assigned_word.split("").sort().join("")).toBe('hello'.split("").sort().join(""))
-      expect(player.assigned_word_unshuffled).toBe('hello')
+      expect(player.assigned_word.split("").sort().join("")).toStrictEqual('hello'.split("").sort().join(""))
+      expect(player.assigned_word_unshuffled).toStrictEqual('hello')
     }
 
     const bonus_cards = new BonusCards()
@@ -261,7 +261,9 @@ describe('Player Tests', () => {
     {
       const { success } = player.make_final_guess('1,3,2,4,0', bonus_cards)
       expect(success).toBe(true)
-      expect(bonus_cards.wild_user().id).toBe(discord_user.id)
+      expect(bonus_cards.wild_user().id).toStrictEqual(discord_user.id)
+      const word = player.assigned_word.split("")
+      expect(player.final_guess).toStrictEqual([word[0], word[2], word[1], word[3], '*'].join(""))
     }
 
     bonus_cards.add('a')
@@ -270,9 +272,12 @@ describe('Player Tests', () => {
       const { success, ...rest } = player.make_final_guess('1,2,3,4,b7', bonus_cards)
       expect(success).toBe(true)
       expect(bonus_cards.wild_user()).toBe(null)
-      expect(bonus_cards.users()[0].id).toBe(discord_user.id)
+      expect(bonus_cards.users()[0].id).toStrictEqual(discord_user.id)
       expect(rest.wild_used).toBe(false)
       expect(rest.bonus_cards_used).toStrictEqual(['a'])
+
+      const word = player.assigned_word
+      expect(player.final_guess).toStrictEqual([word[0], word[1], word[2], word[3], bonus_cards.get(0).card].join(""))
     }
   })
 

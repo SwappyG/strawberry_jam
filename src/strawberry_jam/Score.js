@@ -1,12 +1,22 @@
+const _SCORE_BRACKETS = {
+  2: [10, 18, 27, 36, 46, 1e6],
+  3: [13, 25, 38, 50, 63, 1e6],
+  4: [16, 32, 48, 64, 80, 1e6],
+  5: [19, 39, 59, 78, 98, 1e6],
+  6: [23, 46, 69, 92, 115, 1e6]
+}
+
+export const strawberries_from_score = (score, num_players) => {
+  return '🍓'.repeat(_SCORE_BRACKETS[num_players].findIndex(ii => score < ii))
+}
+
 export const format_score_breakdown = (num_players) => {
-  switch (num_players) {
-    case 2: case 3:
-      return `\`13-24\` 🍓\n\`25-37\` 🍓🍓\n\`38-49\` 🍓🍓🍓\n\`50-62\` 🍓🍓🍓🍓\n\`63+\` 🍓🍓🍓🍓🍓`
-    case 4:
-      return `\`16-31\` 🍓\n\`32-47\` 🍓🍓\n\`48-63\` 🍓🍓🍓\n\`64-79\` 🍓🍓🍓🍓\n\`80+\` 🍓🍓🍓🍓🍓`
-    case 5:
-      return `\`19-38\` 🍓\n\`39-58\` 🍓🍓\n\`59-77\` 🍓🍓🍓\n\`78-97\` 🍓🍓🍓🍓\n\`98+\` 🍓🍓🍓🍓🍓`
-    case 6:
-      return `\`23-45\` 🍓\n\`46-68\` 🍓🍓\n\`69-91\` 🍓🍓🍓\n\`92-114\` 🍓🍓🍓🍓\n\`115+\` 🍓🍓🍓🍓🍓`
-  }
+  const scores = _SCORE_BRACKETS[num_players]
+  return (
+    `    🍓\`${scores[0]}-${scores[1] - 1}\`\n` +
+    `   🍓🍓\`${scores[1]}-${scores[2] - 1}\`\n` +
+    `  🍓🍓🍓\`${scores[2]}-${scores[3] - 1}\`\n` +
+    ` 🍓🍓🍓🍓\`${scores[3]}-${scores[4] - 1}\`\n` +
+    `🍓🍓🍓🍓🍓\`${scores[4]}+\`\n`
+  )
 }

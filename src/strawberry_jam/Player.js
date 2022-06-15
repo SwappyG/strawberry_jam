@@ -259,7 +259,7 @@ export class Player {
       if (index === 0) {
         guess.push('*')
       } else if (is_bonus_index) {
-        guess.push(bonus_cards.get(index - 7))
+        guess.push(bonus_cards.get(index - 7).card)
       } else {
         guess.push(this.assigned_word[index - 1])
       }

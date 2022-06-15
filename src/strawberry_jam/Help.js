@@ -25,7 +25,7 @@ const clue_msg = (prefix) => {
 }
 
 const adv_msg = (prefix) => {
-  return ` - \`${prefix}advance <letter_guess>\` or \`${{ P }}a <letter_guess>\` to move to your next letter.`
+  return ` - \`${prefix}advance <letter_guess>\` or \`${prefix}a <letter_guess>\` to move to your next letter.`
 }
 
 const pass_msg = (prefix) => {

@@ -2,6 +2,10 @@ export const is_letters = (str) => {
   return str.match("^[a-zA-Z]+$");
 }
 
+export const is_alphanumeric = (str) => {
+  return str.match("^[a-zA-Z0-9]+$");
+}
+
 export const shuffle_string = (str) => {
   const str_arr = str.split('')
   for (let i = str_arr.length - 1; i > 0; i--) {

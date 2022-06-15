@@ -4,7 +4,7 @@ import minimist from 'minimist';
 
 import { Constants, Client } from 'discord.js'
 
-import { random_str } from "../utils/String.js"
+import { is_alphanumeric, random_str } from "../utils/String.js"
 import { help_str } from './Help.js';
 import { GameData } from './Game.js';
 import { Mutex } from 'async-mutex';
@@ -60,27 +60,42 @@ class DiscordClient {
   }
 
   _new_game = async (msg, args) => {
+    console.log('1')
+    const password = args?.password ?? args?.p ?? null
+    if (password !== null) {
+      console.log('3')
+      if (typeof password !== 'string' || !is_alphanumeric(password)) {
+        console.log('5')
+        return make_ret(false, `Password, if provided, must be a proper alphanumeric string`)
+      }
+    }
+    console.log('4')
     const game_id = random_str(4)
 
+    console.log('2')
     const { success, reply_msg, dm_msg, ...rest } = this._game_generator(game_id, args, this.prefix)
     if (!success) {
-      return log_and_reply(msg, reply_msg)
+      return { success, reply_msg }
     }
 
-    const error_callback = async (error, user_ids_to_remove) => {
+    console.log('1')
+    const error_callback = async (error, users_in_game) => {
+      console.log(`Game \`${game_id}\` has crashed, got [${error}]`)
       await this._mutex.runExclusive(async () => {
-        user_ids_to_remove.forEach((user_id) => {
-          this.msg_user(user_id, error)
-          delete this._users[user_id]
+        users_in_game.forEach((discord_user) => {
+          delete this._users[discord_user.id]
         })
+        delete this._games[game_id]
       })
     }
 
+    console.log('1')
     await this._mutex.runExclusive(async () => {
       this._games[game_id] = new GameData({
         'id': game_id,
         'creator_name': msg.author.username,
         'creator_id': msg.author.id,
+        'password': password,
         'max_players': args?.max_players ?? 6,
         'is_heroku': this._is_running_on_heroku,
         'game': rest.game,
@@ -89,12 +104,12 @@ class DiscordClient {
       })
     })
 
-    log_and_reply(msg, `A new game with ID \`${game_id}\` was created`)
+    return make_ret(true, `A new game with ID \`${game_id}\` was created`)
   }
 
   _kill_game = async (msg, args) => {
     if (args["_"].length < 2) {
-      return log_and_reply(msg, `You need to specify ID of game to kill`)
+      return make_ret(true, `You need to specify ID of game to kill`)
     }
 
     const game_id = args["_"][1]
@@ -103,15 +118,19 @@ class DiscordClient {
         return make_ret(false, `There is no game with ID: \`${game_id}\``)
       }
 
+      if (this._games[game_id].creator_id !== msg.author.id) {
+        return make_ret(false, `Only the creator of the game can kill it`)
+      }
+
       this._games[game_id].end_game(`The game was killed by ${msg.author.username}`)
       delete this._games[game_id]
       return make_ret(true)
     })
 
     if (!success) {
-      return log_and_reply(msg, reply_msg)
+      return { success, reply_msg }
     }
-    log_and_reply(msg, `Killed game with ID: \`${game_id}\``)
+    return make_ret(true, `Killed game with ID: \`${game_id}\``)
   }
 
   _join_game = async (msg, args) => {
@@ -129,6 +148,17 @@ class DiscordClient {
         return make_ret(false, `You are already in a game with ID: \`${this._users[msg.author.id].game_id}\``)
       }
 
+      if (this._games[game_id].creator_id !== msg.author.id) {
+        const password = args?.password ?? args?.p ?? null
+        if (this._games[game_id].password !== null && password === null) {
+          return make_ret(false, `Game ${game_id} has a password, you must provide it with \`--password <key>\` or \`--p <key>\``)
+        }
+
+        if (this._games[game_id].password !== password) {
+          return make_ret(false, `Incorrect password, try again. The password is case sensitive.`)
+        }
+      }
+
       const { success, reply_msg, dm_msg, ...rest } = await this._games[game_id].game.join(msg.author)
       if (!success) {
         return { success, reply_msg }
@@ -142,10 +172,10 @@ class DiscordClient {
     })
 
     if (!success) {
-      return log_and_reply(msg, reply_msg)
+      return { success, reply_msg }
     }
 
-    log_and_reply(msg, `You've joined game \`${game_id}\`! From here on, DM all commands. **DON'T MSG IN PUBLIC CHANNEL**`)
+    return make_ret(true, `You've joined game \`${game_id}\`! From here on, DM all commands. **DON'T MSG IN PUBLIC CHANNEL**`)
   }
 
   _exit_game = async (msg, args) => {
@@ -167,44 +197,31 @@ class DiscordClient {
 
     if (!success) {
       console.log(`reply_msg: ${reply_msg}`)
-      return log_and_reply(msg, reply_msg)
+      return { success, reply_msg }
     }
 
-    log_and_reply(msg, `You've left game \`${rest.game_id}\``)
+    return make_ret(`You've left game \`${rest.game_id}\``)
   }
 
   _show_games = async (msg, args) => {
     let ret = `${cyan_block('Available Games')}`
 
-    const text = await this._mutex.runExclusive(async () => {
+    const { success, reply_msg, ...rest } = await this._mutex.runExclusive(async () => {
       if (args.id) {
         if (this._games[args.id] === undefined) {
-          return `There is no game with ID ${args.id}`
+          return make_ret(false, `There is no game with ID ${args.id}`)
         }
 
-        return `${await this._games[args.id].format_for_lobby(true)}`
+        return make_ret(true, `${await this._games[args.id].format_for_lobby(true)}`)
       }
 
       for (const [id, data] of Object.entries(this._games)) {
         ret = `${ret}\n${await data.format_for_lobby()}`
       }
-      return ret
+      return make_ret(true, ret)
     })
 
-    log_and_reply(msg, text)
-  }
-
-  msg_user = (user_id, msg) => {
-    if (this._users[user_id] === undefined) {
-      console.log(`msg_user called with invalid user id, ${user_id}. Registered ids:`)
-      return
-    }
-    this._users[user_id].user.send(msg)
-  }
-
-  msg_everyone_in_game = (game_id, text) => {
-    console.log(text)
-    this._games[game_id].game.msg_everyone(text)
+    return { success, reply_msg }
   }
 
   _on_discord_ready = () => {
@@ -226,7 +243,6 @@ class DiscordClient {
         return
       }
 
-      this._last_command_timestamp = Date.now()
       if (this._is_idle) {
         this._start_game()
         msg.author.send(`I've awakened from my slumber`)
@@ -251,24 +267,26 @@ class DiscordClient {
         return log_and_reply(msg, help_msg)
       }
 
+      console.log('1')
       if (this._cmds[args["_"][0]] !== undefined) {
-        return await this._cmds[args["_"][0]](msg, args)
+        const { success, reply_msg, dm_msg, ...rest } = await this._cmds[args["_"][0]](msg, args)
+        reply_msg != null && msg.reply(reply_msg)
+        dm_msg != null && msg.author.send(dm_msg)
+        return
       }
 
+      console.log('2')
       if (this._users[msg.author.id] === undefined && !args.game) {
         return log_and_reply(msg, `You aren't part of any game, so to make game specific commands, use \`--game\` flag with \`<game id>\``)
       }
 
+      console.log('3')
       const game_id = this._users[msg.author.id]?.game_id ?? args.game_id
       if (this._games[game_id] === undefined) {
         return log_and_reply(msg, `The game id \`${game_id} doesn't correspond to any existing game.\``)
       }
 
-      if (this._games[game_id].commands[args["_"][0]] === undefined) {
-        return log_and_reply(msg, `Command ${trimmed_msg} is unknown, try ${this.prefix}help for available commands`)
-      }
-
-      const { success, reply_msg, dm_msg } = await this._games[game_id].commands[args["_"][0]]({
+      const { success, reply_msg, dm_msg } = await this._games[game_id].call({
         discord_user: msg.author,
         args: args
       })

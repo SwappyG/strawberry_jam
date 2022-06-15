@@ -1,6 +1,6 @@
 import { Player } from "./Player.js"
 import { format_clue_tokens } from "./FormatOutput.js"
-import { format_score_breakdown } from "./Score.js"
+import { format_score_breakdown, strawberries_from_score } from "./Score.js"
 
 import { make_ret } from "../utils/Return.js"
 
@@ -87,6 +87,7 @@ export class Players {
 
     player.votes = votes_int
     const names = votes_int.map(num => [...this._players].find(([id, p]) => p.num === num).name)
+    console.log(names)
     return make_ret(true, null, null, { yes_vote_names: names })
   }
 
@@ -222,6 +223,6 @@ export class Players {
     const score = correct_words * [...this._players][0][1].length_of_words * 3 + bonus_letters * 1
     const score_chart = format_score_breakdown(this.num())
 
-    return `_ _\n\nFinal Results\n\n\`\`\`Score: ${score}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
+    return `_ _\n\nFinal Results\n\n\`\`\`Score: ${strawberries_from_score(score, this.num())}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
   }
 }
