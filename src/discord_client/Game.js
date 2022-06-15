@@ -2,7 +2,7 @@ import fetch from "node-fetch"
 import { make_ret } from "../utils/Return.js"
 
 const _HEROKU_ADDRESS = "http://swappy-jam.herokuapp.com"
-const _HEROKU_PING_PERIOD_IN_MS = 0.2/*min*/ * 60/*secs/min*/ * 1000 /*msec/sec*/
+const _HEROKU_PING_PERIOD_IN_MS = 15/*min*/ * 60/*secs/min*/ * 1000 /*msec/sec*/
 
 export class GameData {
   constructor({ id, creator_name, creator_id, password, is_heroku, max_players, game, commands, error_callback }) {
