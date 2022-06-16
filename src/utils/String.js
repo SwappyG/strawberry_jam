@@ -3,7 +3,7 @@ export const is_letters = (str) => {
 }
 
 export const is_alphanumeric = (str) => {
-  return str.match("^[a-zA-Z0-9]+$");
+  return typeof password === 'string' && str.match("^[a-zA-Z0-9]+$");
 }
 
 export const shuffle_string = (str) => {
