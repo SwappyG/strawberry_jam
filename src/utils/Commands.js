@@ -23,7 +23,7 @@ export class Commands {
     return `${[...this._cmds].map(([k, v]) => `${v.format_help()}`).join('\n')}`
   }
 
-  call = ({ func_args, cmd_line_args }) => {
+  call = ({ cmd_line_args, ...others }) => {
     const cmd_name = cmd_line_args["_"][0]
 
     if (cmd_name === 'help' || cmd_name === 'h') {
@@ -35,17 +35,14 @@ export class Commands {
       return make_ret(false, `Command \`${cmd_name}\` is unknown`)
     }
 
-    console.log(cmd)
-
     if (cmd_line_args['help'] || cmd_line_args['h']) {
       const pa = cmd.pos_args
       const ra = cmd.args.filter(a => !a.is_optional() && !a.hidden)
       const oa = cmd.args.filter(a => a.is_optional() && !a.hidden)
+
       const pos_args_help = `**Positional Args**\n${code_block(pa.map(a => a.format_help()).join('\n'))}`
       const req_args_help = `**Required Args**\n${code_block(ra.filter(a => !a.hidden).map(a => a.format_help()).join('\n'))}`
       const opt_args_help = `**Optional Args**\n${code_block(oa.filter(a => !a.hidden).map(a => a.format_help()).join('\n'))}`
-
-      console.log(ra)
 
       const pos_summary = pa.length === 0 ? '' : `${pa.map(a => `${a.name}`).join(' ')}`
       const req_summary = ra.length === 0 ? '' : `${ra.map(a => `--${a.name} <${a.name}>`).join(' ')}`
@@ -62,6 +59,6 @@ export class Commands {
       return { success, reply_msg }
     }
 
-    return cmd.func({ func_args, args: rest.cmd_line_args })
+    return cmd.func({ args: rest.cmd_line_args, ...others })
   }
 }

@@ -1,4 +1,5 @@
-import { make_ret } from "./Return"
+import { make_ret } from "./Return.js"
+import { code_block } from "./DiscordFormat.js"
 
 export class Command {
   constructor({ name, func, help, pos_args, args, alias }) {
@@ -48,7 +49,7 @@ export class Command {
 
     const missing_required_args = this._find_missing_required_args(non_pos_args)
     if (missing_required_args.length > 0) {
-      return make_ret(false, `The following required args are missing:\n${code_block(`- ${missing_args.join('\n- ')}`)}`)
+      return make_ret(false, `The following required args are missing:\n${code_block(`- ${missing_required_args.join('\n- ')}`)}`)
     }
 
     const missing_optional_args_defaults = this._find_missing_optional_args(non_pos_args)
