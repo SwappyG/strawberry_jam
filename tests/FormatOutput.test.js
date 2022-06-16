@@ -4,7 +4,7 @@ import { DiscordUserMock } from "./DiscordUserMock.js"
 
 describe('FormatOutput Tests', () => {
   test("FormatBoard Invalid Before Start", async () => {
-    const sjam = make_strawberry_jam('ABCD', { w: 5 }, '?').game
+    const sjam = StrawberryJam.create({ game_id: 'ABCD', args: { letters: 5 }, prefix: '?' }).game
 
     const cmds = sjam.get_commands()
     const user_1 = new DiscordUserMock()
@@ -38,12 +38,13 @@ describe('FormatOutput Tests', () => {
 
     {
       const { success, ...rest } = await cmds['b']({ discord_user: user_1, args: { _: ["b"], is_dm: true } })
+      console.log(rest)
       expect(success).toBe(true)
     }
   })
 
   test("FormatBoard Valid After State", async () => {
-    const sjam = make_strawberry_jam('ABCD', { w: 5, max_players: 2 }, '?').game
+    const sjam = StrawberryJam.create({ game_id: 'ABCD', args: { letters: 5, max_players: 2 }, prefix: '?' }).game
 
     const cmds = sjam.get_commands()
     const user_1 = new DiscordUserMock()
@@ -101,7 +102,7 @@ describe('FormatOutput Tests', () => {
   })
 
   test("FormatBoard Valid After State", async () => {
-    const sjam = make_strawberry_jam('ABCD', { w: 5, max_players: 2 }, '?').game
+    const sjam = StrawberryJam.create({ game_id: 'ABCD', args: { letters: 5, max_players: 2 }, prefix: '?' }).game
 
     const cmds = sjam.get_commands()
     const user_1 = new DiscordUserMock()

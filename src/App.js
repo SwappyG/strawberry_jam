@@ -1,4 +1,4 @@
-import { make_strawberry_jam } from "./strawberry_jam/StrawberryJam.js"
+import { StrawberryJam } from "./strawberry_jam/StrawberryJam.js"
 import { DiscordClient } from "./discord_client/DiscordClient.js"
 
 import express from "express"
@@ -17,7 +17,7 @@ const App = () => {
 
   const letter_jam = new DiscordClient({
     discord_token_file_path: 'keys/discord_token.json',
-    game_generator: make_strawberry_jam
+    game_type: StrawberryJam
   })
 }
 

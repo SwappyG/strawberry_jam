@@ -1,9 +1,10 @@
 import { make_ret } from "./Return.js"
+import { code_block } from "./DiscordFormat.js"
 
 const ARG_TYPES = ['number', 'string', 'boolean', 'enum']
 
 export class Arg {
-  constructor({ name, help, alias, type, default_value, range, choices, hidden, validator }) {
+  constructor({ name, help, alias, type, default_value, range, choices, hidden, nullable, validator }) {
     this.name = name
     this.help = help ?? 'Help is not documented for this arg'
     this.alias = alias ?? null
@@ -13,6 +14,7 @@ export class Arg {
     this.hidden = hidden ?? false
     this.validator = validator ?? ((text) => make_ret(true))
     this.default_value = default_value
+    this.nullable = nullable ?? false
 
     if (!ARG_TYPES.includes(type)) {
       throw new Error(`Type ${type} is not valid.`)
@@ -44,8 +46,12 @@ export class Arg {
   }
 
   validate = (value) => {
+    if (this.nullable && value === null) {
+      return make_ret(true)
+    }
+
     if (['number', 'boolean', 'string'].includes(this.type) && typeof value !== this.type) {
-      return make_ret(false, `Expected value for \`${this.name}\` to be type \`${this.type}\``)
+      return make_ret(false, `Expected value for \`${this.name}\` to be type \`${this.type}\`, got ${value}`)
     }
 
     if (this.type === 'enum' && !this.choices.includes(value)) {
@@ -56,7 +62,12 @@ export class Arg {
       return make_ret(false, `value for \`${this.name}\` is out of range`)
     }
 
-    return this.validator(value)
+    try {
+      const { success, ...rest } = this.validator(value)
+      return { success, ...rest }
+    } catch (e) {
+      throw new Error(`Arg \`${this.name}\` has a bad validator, it threw:${code_block(e)}`)
+    }
   }
 
   is_optional = () => {
