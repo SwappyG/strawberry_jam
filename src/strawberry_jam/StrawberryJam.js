@@ -13,30 +13,7 @@ import { get_help_string } from './Help.js';
 import { char_array_to_int_array } from '../utils/String.js';
 import { make_ret } from '../utils/Return.js';
 
-export const make_strawberry_jam = (game_id, args, prefix) => {
-  if (args.help) {
-    const word_len_msg = `- \`--word_length <length>\` or \`--w <length>\`, how long each player's word will be`
-    const max_players_msg = `- \`--max_players <num>\` how many players allowed in lobby, between 2 and 6`
-    return make_ret(false, `_ _\n\nRequired args:\n${word_len_msg}\n\nOptional args:\n${max_players_msg}`)
-  }
-
-  if (!args.word_length && !args.w) {
-    return make_ret(false, `Missing required arg \`--word_length\` or \`--w\``)
-  }
-
-  const length_of_words = parseInt(args?.word_length ?? args?.w)
-  if (isNaN(length_of_words) || length_of_words < 4 || length_of_words > 7) {
-    return make_ret(false, `Player words must be between 4 and 7, try again`)
-  }
-
-  const options = {
-    'length_of_words': length_of_words,
-    'max_players': Math.min(6, Math.max(2, args?.max_players ?? 6)),
-    'allow_single_player': args?.allow_single_player ?? false,
-  }
-
-  return make_ret(true, null, null, { game: new StrawberryJam(game_id, options, prefix) })
-}
+import { Arg } from '../utils/Arg.js';
 
 const notify_if_not_dm = (args) => {
   return args.is_dm ? null : `The result of your request has been DM'ed to you`
@@ -50,7 +27,42 @@ export class StrawberryJam {
 
     this._mutex = new Mutex()
 
+    console.log(this.options)
+
     this._reset()
+  }
+
+  static get_args = () => {
+    return [
+      new Arg({ name: 'letters', alias: 'l', type: 'enum', choices: [4, 5, 6, 7], help: 'The number of letters each player will be assigned' }),
+      new Arg({ name: 'allow_single_player', alias: 'asl', type: 'boolean', default_value: false, help: 'Allow game to be started with only 1 player. For debugging only.' }),
+      new Arg({ name: 'max_players', alias: 'n', type: 'enum', choices: [2, 3, 4, 5, 6], default_value: 6, help: 'Limit the number of players in game' }),
+    ]
+  }
+
+  static create = ({ game_id, args, prefix }) => {
+    // if (args.help) {
+    //   const word_len_msg = `- \`--word_length <length>\` or \`--w <length>\`, how long each player's word will be`
+    //   const max_players_msg = `- \`--max_players <num>\` how many players allowed in lobby, between 2 and 6`
+    //   return make_ret(false, `_ _\n\nRequired args:\n${word_len_msg}\n\nOptional args:\n${max_players_msg}`)
+    // }
+
+    // if (!args.letters) {
+    //   return make_ret(false, `Missing required arg \`--word_length\` or \`--w\``)
+    // }
+
+    // const length_of_words = parseInt(args.letters)
+    // if (isNaN(length_of_words) || length_of_words < 4 || length_of_words > 7) {
+    //   return make_ret(false, `Player words must be between 4 and 7, try again`)
+    // }
+
+    const options = {
+      'length_of_words': args.letters,
+      'max_players': args.max_players,
+      'allow_single_player': args.allow_single_player,
+    }
+
+    return make_ret(true, null, null, { game: new StrawberryJam(game_id, options, prefix) })
   }
 
   get_commands = () => {
