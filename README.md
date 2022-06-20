@@ -1,6 +1,10 @@
 # strawberry_jam
 
-## Setup
+## Instructions for Using Bot
+
+_work in progress_
+
+## Setup for hosting your own bot
 
 - git clone the repo
 - Make a folder called `keys/` in the root directory
@@ -23,12 +27,11 @@
 }
 ```
 
-- in `DiscordClient.ks`, change `_DISCORD_PREFIX` if needed
+- in `DiscordClient.js`, change `_DISCORD_PREFIX` if needed
   - can also just pass in an arg to `DiscordClient` constructor
 
 - download and install all dependencies with `npm install` in the root directory
 
 - `npm start` will launch your bot
 
-- In a server with your new bot (while it's running), type `?help` to see what you can do at each step of the setup and game
-  - (replace `?` if you chose a different prefix)
+- In a server with your new bot (while it's running), type `?help` to get started
