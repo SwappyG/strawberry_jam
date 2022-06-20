@@ -19,53 +19,40 @@ describe('Players Tests', () => {
     const deck = new Deck()
     let players = new Players(2)
 
-    expect(players.num()).toBe(0)
-
     const user_1 = new DiscordUserMock()
     const user_2 = new DiscordUserMock()
     const user_3 = new DiscordUserMock()
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_1, length_of_words: 5 })
-      expect(success).toBe(true)
-      expect(players.num()).toBe(1)
-    }
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_1, length_of_words: 5 })
-      expect(success).toBe(false)
-      expect(players.num()).toBe(1)
-    }
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_2, length_of_words: 5 })
-      expect(success).toBe(true)
-      expect(players.num()).toBe(2)
-    }
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_3, length_of_words: 5 })
-      expect(success).toBe(false)
-      expect(players.num()).toBe(2)
-    }
+
+    expect(players.num()).toBe(0)
+
+    expect(players.add_player({ discord_user: user_1, length_of_words: 5 }).success).toBe(true)
+    expect(players.num()).toBe(1)
+
+    expect(players.add_player({ discord_user: user_1, length_of_words: 5 }).success).toBe(false) // can't be added twice
+    expect(players.num()).toBe(1)
+
+    expect(players.add_player({ discord_user: user_2, length_of_words: 5 }).success).toBe(true)
+    expect(players.num()).toBe(2)
+
+    expect(players.add_player({ discord_user: user_3, length_of_words: 5 }).success).toBe(false) // max players was set to 2
+    expect(players.num()).toBe(2)
 
     expect(players.get_player(user_1.id)).not.toBe(null)
     expect(players.get_player(user_2.id)).not.toBe(null)
     expect(players.get_player(user_3.id)).toBe(null)
 
-    {
-      const { success, ...rest } = players.remove_player(user_3)
-      expect(success).toBe(false)
-      expect(players.num()).toBe(2)
-    }
-    {
-      const { success, ...rest } = players.remove_player(user_1)
-      expect(success).toBe(true)
-      expect(players.num()).toBe(1)
-      expect(players.get_player(user_1.id)).toBe(null)
-    }
-    {
-      const { success, ...rest } = players.remove_player(user_2)
-      expect(success).toBe(true)
-      expect(players.num()).toBe(0)
-      expect(players.get_player(user_2.id)).toBe(null)
-    }
+    expect(players.remove_player(user_3).success).toBe(false) // can't be remove non-existent player
+    expect(players.num()).toBe(2)
+
+    expect(players.remove_player(user_1).success).toBe(true)
+    expect(players.num()).toBe(1)
+    expect(players.get_player(user_1.id)).toBe(null)
+    expect(players.get_player(user_2.id)).not.toBe(null)
+
+    expect(players.remove_player(user_2).success).toBe(true)
+    expect(players.num()).toBe(0)
+    expect(players.get_player(user_1.id)).toBe(null)
+    expect(players.get_player(user_2.id)).toBe(null)
   })
 
   test("Players Assign Words", () => {
@@ -77,36 +64,18 @@ describe('Players Tests', () => {
     const user_1 = new DiscordUserMock()
     const user_2 = new DiscordUserMock()
     const user_3 = new DiscordUserMock()
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_1, length_of_words: 5 })
-      expect(success).toBe(true)
-    }
-    {
-      const { success, ...rest } = players.assign_word_to_all_players(user_1, {})
-      expect(success).toBe(false) // can't start with only 1 player
-    }
+    console.log(players.add_player({ discord_user: user_1, length_of_words: 5 }))
 
-    {
-      const { success, ...rest } = players.add_player({ discord_user: user_2, length_of_words: 5 })
-      expect(success).toBe(true)
-    }
-    {
-      const { success, ...rest } = players.assign_word_to_all_players(user_3, {})
-      expect(success).toBe(false) // player not in players can't assign
-    }
-    {
-      const { success, ...rest } = players.assign_word_to_all_players(user_2, {})
-      expect(success).toBe(false) // players haven't set their word yet
-    }
+    expect(players.assign_word_to_all_players(user_1, {}).success).toBe(false) // can't start with only 1 player
 
-    {
-      const { success, ...rest } = players.get_player(user_1.id).set_word_from_deck(deck, 'hello')
-      expect(success).toBe(true)
-    }
-    {
-      const { success, ...rest } = players.get_player(user_2.id).set_word_from_deck(deck, 'kayak')
-      expect(success).toBe(true)
-    }
+    console.log(players.add_player({ discord_user: user_2, length_of_words: 5 }))
+
+    expect(players.assign_word_to_all_players(user_3, {}).success).toBe(false) // player not in players can't assign
+    expect(players.assign_word_to_all_players(user_2, {}).success).toBe(false) // players haven't set their word yet
+
+    console.log(players.get_player(user_1.id).set_word_from_deck(deck, 'hello'))
+    console.log(players.get_player(user_2.id).set_word_from_deck(deck, 'kayak'))
+
     {
       const { success, ...rest } = players.assign_word_to_all_players(user_2, {})
       expect(success).toBe(true)
@@ -177,24 +146,10 @@ describe('Players Tests', () => {
     players.get_player(user_2.id).set_word_from_deck(deck, 'kayak')
     players.assign_word_to_all_players(user_2, {})
 
+    expect(players.add_votes(user_1.id, [3]).success).toBe(false) // invalid index, player nums go from 1 - num players
+    expect(players.add_votes(user_1.id, [1, 1]).success).toBe(false) // invalid index, duplicates
     {
-      const { success, ...rest } = players.add_votes(user_1.id, '0')
-      expect(success).toBe(false) // invalid index, player nums go from 1 - num players
-    }
-    {
-      const { success, ...rest } = players.add_votes(user_1.id, '3')
-      expect(success).toBe(false) // invalid index, player nums go from 1 - num players
-    }
-    {
-      const { success, ...rest } = players.add_votes(user_1.id, '1,1')
-      expect(success).toBe(false) // duplicate index
-    }
-    {
-      const { success, ...rest } = players.add_votes(user_1.id, 'a')
-      expect(success).toBe(false) // invalid index
-    }
-    {
-      const { success, ...rest } = players.add_votes(user_1.id, '1')
+      const { success, ...rest } = players.add_votes(user_1.id, [1])
       expect(success).toBe(true)
     }
   })
@@ -207,24 +162,24 @@ describe('Players Tests', () => {
     const user_2 = new DiscordUserMock()
     const user_3 = new DiscordUserMock()
 
-    players.add_player({ discord_user: user_1, length_of_words: 5 })
-    players.add_player({ discord_user: user_2, length_of_words: 5 })
+    console.log(players.add_player({ discord_user: user_1, length_of_words: 5 }))
+    console.log(players.add_player({ discord_user: user_2, length_of_words: 5 }))
     expect(players.num()).toBe(2)
 
-    players.get_player(user_1.id).set_word_from_deck(deck, 'hello')
-    players.get_player(user_2.id).set_word_from_deck(deck, 'kayak')
-    players.assign_word_to_all_players(user_2, {})
+    console.log(players.get_player(user_1.id).set_word_from_deck(deck, 'hello'))
+    console.log(players.get_player(user_2.id).set_word_from_deck(deck, 'kayak'))
+    console.log(players.assign_word_to_all_players(user_2, {}))
 
     expect(players.all_players_have_final_guess()).toBe(false)
 
     const bonus_cards = new BonusCards()
     {
-      const { success, ...rest } = players.get_player(user_1.id).make_final_guess('2,3,1,4,5', bonus_cards)
+      const { success, ...rest } = players.get_player(user_1.id).make_final_guess(['2', '3', '1', '4', '5'], bonus_cards)
       expect(success).toBe(true)
       expect(players.all_players_have_final_guess()).toBe(false) // only 1 player does
     }
     {
-      const { success, ...rest } = players.get_player(user_2.id).make_final_guess('2,3,1,4,5', bonus_cards)
+      const { success, ...rest } = players.get_player(user_2.id).make_final_guess(['2', '3', '1', '4', '5'], bonus_cards)
       expect(success).toBe(true)
       expect(players.all_players_have_final_guess()).toBe(true)
     }

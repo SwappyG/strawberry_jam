@@ -1,4 +1,4 @@
-export class Clues {
+export class ClueTokens {
   constructor(num_players) {
     this._remaining = num_players <= 3 ? 8 : 10
     this._locked = num_players <= 3 ? 3 : 1

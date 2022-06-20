@@ -5,7 +5,6 @@ export class Commands {
   constructor() {
     this._cmds = new Map()
     this._aliases = new Map()
-    this._help_func = () => ''
   }
 
   add = (cmd) => {
@@ -15,19 +14,36 @@ export class Commands {
     }
   }
 
-  set_help_func = (func) => {
-    this._help_func = func
+  merge = (cmds) => {
+    const cmd_names = [...this._cmds].map(([k, v]) => k)
+    const conflicting_cmd_names = cmds.filter(c => cmd_names.includes(c))
+    if (conflicting_cmd_names.length > 0) {
+      throw new Error(`Can't merge \`Commands\` objects, they contain the following conflicting command names: \`${conflicting_cmd_names}\``)
+    }
+
+    const alias_names = [...this._aliases].map(([k, v]) => k)
+    const conflicting_alias_names = cmds.filter(c => cmd_names.includes(c))
+    if (conflicting_alias_names.length > 0) {
+      throw new Error(`Can't merge \`Commands\` objects, they contain the following conflicting alias names: \`${conflicting_alias_names}\``)
+    }
+
+    cmds._cmds.forEach(([v, k]) => this._cmds.set(k, v))
+    cmds._aliases.forEach(([v, k]) => this._aliases.set(k, v))
   }
 
-  list_cmds_and_descriptions = () => {
-    return `${[...this._cmds].map(([k, v]) => `${v.format_help()}`).join('\n')}`
+  exists = (name) => {
+    return this._cmds.get(name) !== undefined || this._aliases.get(name) !== undefined
+  }
+
+  help = () => {
+    return [...this._cmds].filter(([k, v]) => !v.is_hidden).map(([k, v]) => `${v.format_help()}`)
   }
 
   call = ({ cmd_line_args, ...others }) => {
     const cmd_name = cmd_line_args["_"][0]
 
     if (cmd_name === 'help' || cmd_name === 'h') {
-      return make_ret(true, `\n${cyan_block('Available Commands')}\n${code_block(this.list_cmds_and_descriptions())}\n${this._help_func()}`)
+      return make_ret(true, `\n${cyan_block('Available Commands')}\n${code_block(this.help().join("\n"))}`)
     }
 
     const cmd = this._cmds.get(cmd_name) ?? this._cmds.get(this._aliases.get(cmd_name)) ?? null
@@ -36,22 +52,7 @@ export class Commands {
     }
 
     if (cmd_line_args['help'] || cmd_line_args['h']) {
-      const pa = cmd.pos_args
-      const ra = cmd.args.filter(a => !a.is_optional() && !a.hidden)
-      const oa = cmd.args.filter(a => a.is_optional() && !a.hidden)
-
-      const pos_args_help = `**Positional Args**\n${code_block(pa.map(a => a.format_help()).join('\n'))}`
-      const req_args_help = `**Required Args**\n${code_block(ra.filter(a => !a.hidden).map(a => a.format_help()).join('\n'))}`
-      const opt_args_help = `**Optional Args**\n${code_block(oa.filter(a => !a.hidden).map(a => a.format_help()).join('\n'))}`
-
-      const pos_summary = pa.length === 0 ? '' : `${pa.map(a => `${a.name}`).join(' ')}`
-      const req_summary = ra.length === 0 ? '' : `${ra.map(a => `--${a.name} <${a.name}>`).join(' ')}`
-      const opt_summary = oa.length === 0 ? '' : `[${oa.map(a => `--${a.name} <${a.name}>`).join('], [')}]`
-
-      const usage = `**Usage**\n${code_block(`${cmd_name} ${pos_summary} ${req_summary} ${opt_summary}`)}`
-
-      const ret = `${cyan_block(`${cmd_name} - ${cmd.help}`)}\n${usage}\n${pos_args_help}\n${req_args_help}\n${opt_args_help}`
-      return make_ret(true, ret)
+      return make_ret(true, cmd.format_detailed_help())
     }
 
     const { success, reply_msg, ...rest } = cmd.validate_and_cleanup(cmd_line_args)

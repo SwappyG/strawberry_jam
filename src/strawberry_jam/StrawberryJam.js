@@ -6,7 +6,7 @@ import { Deck } from './Deck.js';
 import { Players } from './Players.js';
 import { BonusCards } from './BonusCards.js'
 import { PublicPiles } from './PublicPiles.js';
-import { Clues } from './Clues.js';
+import { ClueTokens } from './ClueTokens.js';
 
 import { format_hint, format_board } from './FormatOutput.js'
 import { get_help_string } from './Help.js';
@@ -14,6 +14,9 @@ import { char_array_to_int_array } from '../utils/String.js';
 import { make_ret } from '../utils/Return.js';
 
 import { Arg } from '../utils/Arg.js';
+import { Commands } from '../utils/Commands.js';
+
+import * as make_cmds from './StrawberryJamCommands.js'
 
 const notify_if_not_dm = (args) => {
   return args.is_dm ? null : `The result of your request has been DM'ed to you`
@@ -34,7 +37,7 @@ export class StrawberryJam {
 
   static get_args = () => {
     return [
-      new Arg({ name: 'letters', alias: 'l', type: 'enum', choices: [4, 5, 6, 7], help: 'The number of letters each player will be assigned' }),
+      new Arg({ name: 'letters', alias: 'l', type: 'enum', choices: [3, 4, 5, 6, 7], help: 'The number of letters each player will be assigned' }),
       new Arg({ name: 'allow_single_player', alias: 'asl', type: 'boolean', default_value: false, help: 'Allow game to be started with only 1 player. For debugging only.' }),
       new Arg({ name: 'max_players', alias: 'n', type: 'enum', choices: [2, 3, 4, 5, 6], default_value: 6, help: 'Limit the number of players in game' }),
     ]
@@ -66,27 +69,22 @@ export class StrawberryJam {
   }
 
   get_commands = () => {
-    const commands = [
-      [["lobby", "l"], this._view_lobby],
-      [["word", "w"], this._set_word],
-      [["start", "s"], this._start_game],
-      [["end", "e"], this._end_game],
-      [["board", "b"], this._show_board],
-      [["clue", "c"], this._give_clue],
-      [["view", "v"], this._view_hints],
-      [["pass", "p"], this._pass],
-      [["advance", "a"], this._advance],
-      [["guess", "g"], this._guess_letter],
-      [["final", "f"], this._final_guess],
-      [["results", "r"], this._show_results],
-      [["vote", "V"], this._vote_for_score],
-      [["_debug", "_d"], this._debug],
-    ]
-
-    return commands.reduce((accum, [cmds, func]) => {
-      cmds.forEach(cmd => { accum[cmd] = func })
-      return accum
-    }, {})
+    const cmds = new Commands()
+    cmds.add(make_cmds.make_lobby_command(this._view_lobby))
+    cmds.add(make_cmds.make_word_command(this._set_word))
+    cmds.add(make_cmds.make_start_command(this._start_game))
+    cmds.add(make_cmds.make_end_game_command(this._end_game))
+    cmds.add(make_cmds.make_board_command(this._show_board))
+    cmds.add(make_cmds.make_clue_command(this._give_clue))
+    cmds.add(make_cmds.make_view_clues_command(this._view_hints))
+    cmds.add(make_cmds.make_pass_command(this._pass))
+    cmds.add(make_cmds.make_advance_command(this._advance))
+    cmds.add(make_cmds.make_guess_bonus_command(this._guess_letter))
+    cmds.add(make_cmds.make_final_guess_command(this._final_guess))
+    cmds.add(make_cmds.make_results_command(this._show_results))
+    cmds.add(make_cmds.make_vote_command(this._vote_for_score))
+    cmds.add(make_cmds.make_debug_command(this._debug))
+    return cmds
   }
 
   join = async (discord_user) => {
@@ -134,16 +132,16 @@ export class StrawberryJam {
       id: this.id,
       options: this.options,
       state: this._state,
-      num_players: this._players.num(),
-      bonus_cards: this._bonus_cards._cards,
-      remaining_clues: this._clues.remaining(),
-      locked_clues: this._clues.locked(),
-      public_clues: this._public_piles._clues,
-      public_pile_num_cards: this._public_piles._piles.map(pile => pile.length),
-      public_top_cards: this._public_piles._piles.map(pile => pile[0]),
-      player_states: [...this._players._players].map(([id, player]) => player.state),
-      player_active_letters: [...this._players._players].map(([id, player]) => player.get_active_letter()),
-      player_votes: [...this._players._players].map(([id, player]) => player.votes)
+      num_players: this._players?.num(),
+      bonus_cards: this._bonus_cards?._cards,
+      remaining_clues: this._clue_tokens?.remaining(),
+      locked_clues: this._clue_tokens?.locked(),
+      public_clues: this._public_piles?._clues,
+      public_pile_num_cards: this._public_piles?._piles.map(pile => pile.length),
+      public_top_cards: this._public_piles?._piles.map(pile => pile[0]),
+      player_states: [...this._players?._players].map(([id, player]) => player.state),
+      player_active_letters: [...this._players?._players].map(([id, player]) => player.get_active_letter()),
+      player_votes: [...this._players?._players].map(([id, player]) => player.votes)
     }
   }
 
@@ -181,7 +179,7 @@ export class StrawberryJam {
     this._players = new Players(this.options.max_players)
     this._public_piles = null
     this._bonus_cards = new BonusCards()
-    this._clues = null
+    this._clue_tokens = null
   }
 
   _parse_hint_indices = (hint, player_index) => {
@@ -215,15 +213,12 @@ export class StrawberryJam {
         return make_ret(false, `Cannot set word after game has already started`)
       }
 
+      console.log(args)
       if (!args.is_dm) {
         return make_ret(false, `Your secret word must be a DM! Choose a new word and DM it instead`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to specify your word`)
-      }
-
-      const word = args["_"][1]
+      const word = args["_"][0]
       const { success, reply_msg, dm_msg, ...rest } = this._players.apply_to_player(discord_user, (player) => {
         return player.set_word_from_deck(this._deck, word)
       })
@@ -249,7 +244,7 @@ export class StrawberryJam {
 
       this._players.msg_everyone(`All players have been assigned their word. The game has been started`)
       this._public_piles = new PublicPiles(this._deck, this._players.num(), this.options)
-      this._clues = new Clues(this._players.num())
+      this._clue_tokens = new ClueTokens(this._players.num())
       this._state = STATE.WAITING_FOR_HINT
       this._send_board_to_everyone()
       return make_ret(true, `You've started the game`)
@@ -286,32 +281,29 @@ export class StrawberryJam {
         return make_ret(false, `You can't give a clue if you're not in the game`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to specify your hint. Call help for syntax.`)
-      }
-      const hint = args["_"][1]
+      const clue = args["_"][0]
 
-      const { success, reply_msg, dm_msg, ...rest } = this._parse_hint_indices(hint, hint_giving_player.num)
-      if (!success) {
-        return { success, reply_msg }
+      const bad_indices = clue.filter(h => h === hint_giving_player.num || h > 6 + this._bonus_cards.num())
+      if (bad_indices.length > 0) {
+        return make_ret(false, `Your clue cannot contain yourself or numbers not matching indices of other players, wild card or bonus cards. \`${bad_indices}\` are invalid`)
       }
 
       hint_giving_player.give_hint()
-      this._active_hint_indices = rest.indices
+      this._active_clue_indices = clue
 
       for (const [id, player] of this._players.get()) {
-        let ret = format_hint(player, this._players, this._public_piles, this._bonus_cards, this._active_hint_indices)
+        let ret = format_hint(player, this._players, this._public_piles, this._bonus_cards, this._active_clue_indices)
         if (player.id === discord_user.id) {
-          player.send(`you just sent the hint: \`${ret}\``)
-        } else if (this._active_hint_indices.includes(player.num)) {
-          player.send(`_ _\n\n\`${discord_user.username}\` sent you a new hint: \`${ret}\`\n`)
+          player.send(`you just sent the clue: \`${ret}\``)
+        } else if (this._active_clue_indices.includes(player.num)) {
+          player.send(`_ _\n\n\`${discord_user.username}\` sent you a new clue: \`${ret}\`\n`)
           player.receive_hint(ret)
         } else {
-          player.send(`_ _\n\n\`${discord_user.username}\` sent a hint, but you're not part of it: \`${ret}\`\n`)
+          player.send(`_ _\n\n\`${discord_user.username}\` sent a new clue, but you're not part of it: \`${ret}\`\n`)
         }
       }
 
-      this._clues.decrement()
+      this._clue_tokens.decrement()
       this._state = STATE.DURING_HINT
       this._send_board_to_everyone()
 
@@ -340,20 +332,20 @@ export class StrawberryJam {
   }
 
   _end_round = () => {
-    const depleted_piles = this._public_piles.update(this._deck, this._active_hint_indices)
+    const depleted_piles = this._public_piles.update(this._deck, this._active_clue_indices)
     for (const p of depleted_piles) {
-      this._clues.increment()
+      this._clue_tokens.increment()
       this._players.msg_everyone(`Pile \`< ${p} >\` has been depleted, a new clue token was unlocked`)
     }
-    this._bonus_cards.update(this._deck, this._active_hint_indices)
-    this._clues.update(this._players.get_player_clues_given())
+    this._bonus_cards.update(this._deck, this._active_clue_indices)
+    this._clue_tokens.update(this._players.get_player_clues_given())
     this._players.end_round()
 
-    this._active_hint_indices = []
+    this._active_clue_indices = []
 
     this._players.msg_everyone(`The current hint is over. Anyone can now give the next hint`)
     this._send_board_to_everyone()
-    if (!this._clues.has_remaining()) {
+    if (!this._clue_tokens.has_remaining()) {
       this._players.msg_everyone(`There are no more hints remaining. Everyone should now guess their word`)
       this._state = STATE.FINAL_GUESS
     } else {
@@ -367,11 +359,7 @@ export class StrawberryJam {
         return make_ret(false, `Cannot end hint while no hint is in progress`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to enter a character for your guess for this index. Call help for syntax.`)
-      }
-
-      const letter = args["_"][1]
+      const letter = args["_"][0]
       const { success, reply_msg, dm_msg, ...rest } = this._players.apply_to_player(discord_user, (player) => {
         return player.advance_to_next_letter(this._deck, letter)
       })
@@ -419,11 +407,7 @@ export class StrawberryJam {
         return make_ret(false, `Cannot guess bonus letter when no hint is in progress`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to specify the letter to guess`)
-      }
-      const letter = args["_"][1]
-
+      const letter = args["_"][0]
       const { success, reply_msg, dm_msg, ...rest } = this._players.apply_to_player(discord_user, (player) => {
         return player.guess_bonus(this._deck, letter)
       })
@@ -433,7 +417,7 @@ export class StrawberryJam {
 
       if (rest.correct) {
         this._players.msg_everyone(`\`${discord_user.username}\` correctly guessed their bonus letter!`)
-        this._bonus_cards.add(letter.toLowerCase())
+        this._bonus_cards.add(letter)
       } else {
         this._players.msg_everyone(`\`${discord_user.username}\` did not guess their letter.`)
       }
@@ -451,10 +435,7 @@ export class StrawberryJam {
         return make_ret(false, `Can't make final guess until all clues have been used`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to specify the indices for your final guess. Call help for syntax.`)
-      }
-      const indices = args["_"][1]
+      const indices = args["_"][0]
       const { success, reply_msg, dm_msg, ...rest } = this._players.apply_to_player(discord_user, (player) => {
         return player.make_final_guess(indices, this._bonus_cards)
       })
@@ -490,10 +471,7 @@ export class StrawberryJam {
         return make_ret(false, `Can't vote for score until the end of the game`)
       }
 
-      if (args["_"].length < 2) {
-        return make_ret(false, `You need to specify the player indices for your vote. Call help for syntax.`)
-      }
-      const votes = args["_"][1]
+      const votes = args["_"][0]
       const { success, reply_msg, dm_msg, ...rest } = this._players.add_votes(discord_user.id, votes)
       if (!success) {
         return { success, reply_msg }
@@ -519,7 +497,7 @@ export class StrawberryJam {
       }
 
       if (args.add_hints) {
-        this._clues.increment(parseInt(args.add_hints))
+        this._clue_tokens.increment(parseInt(args.add_hints))
         make_ret(true, `Added ${args.add_hints} clue to "remaining clues" pile`)
       }
 
@@ -556,7 +534,7 @@ export class StrawberryJam {
       }
 
       if (args.clues) {
-        make_ret(true, `\`\`\`${JSON.stringify(this._clues, null, 2)}\`\`\``)
+        make_ret(true, `\`\`\`${JSON.stringify(this._clue_tokens, null, 2)}\`\`\``)
       }
 
       if (args.bonus) {
@@ -564,7 +542,7 @@ export class StrawberryJam {
       }
 
       if (args.consume_hints) {
-        this._clues.decrement(parseInt(args.consume_hints))
+        this._clue_tokens.decrement(parseInt(args.consume_hints))
         discord_user.send(`${args.consume_hints} hints were consumed`)
       }
 
@@ -584,8 +562,8 @@ export class StrawberryJam {
       }
 
       if (args.unlock_clues) {
-        this._clues._remaining = this._clues._remaining + this._clues._locked
-        this._clues._locked = 0
+        this._clue_tokens._remaining = this._clue_tokens._remaining + this._clue_tokens._locked
+        this._clue_tokens._locked = 0
         discord_user.send(`unlocked locked clues`)
       }
       return make_ret(true)
@@ -597,6 +575,6 @@ export class StrawberryJam {
   }
 
   _format_board = (messenger_id, help = false) => {
-    return format_board(this._players, this._public_piles, this._bonus_cards, this._clues, messenger_id, help)
+    return format_board(this._players, this._public_piles, this._bonus_cards, this._clue_tokens, messenger_id, help)
   }
 }
