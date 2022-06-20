@@ -64,6 +64,7 @@ describe('Commands Tests', () => {
       expect(success).toBe(true)
       expect(cmd_line_args.opt1).toStrictEqual('default')
       expect(cmd_line_args.req1).toStrictEqual('some_str')
+      console.log(cmd_line_args)
       expect(cmd_line_args._).toStrictEqual(['val1', 'val2'])
     }
   })

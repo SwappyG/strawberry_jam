@@ -36,12 +36,12 @@ export class GameData {
     }, _HEROKU_PING_PERIOD_IN_MS)
   }
 
-  call = async ({ discord_user, args }) => {
-    if (this.commands[args["_"][0]] === undefined) {
-      return make_ret(false, `Command ${args["_"][0]} is unknown, try ${this.prefix}help for available commands`)
+  call = async ({ discord_user, cmd_line_args }) => {
+    if (!this.commands.exists(cmd_line_args["_"][0])) {
+      return make_ret(false, `Command ${cmd_line_args["_"][0]} is unknown, try ${this.prefix}help for available commands`)
     }
     this.last_cmd_timestamp = Date.now()
-    return await this.commands[args["_"][0]]({ discord_user, args })
+    return await this.commands.call({ discord_user, cmd_line_args })
   }
 
   end_game = async (reason) => {

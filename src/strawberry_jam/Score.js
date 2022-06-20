@@ -13,10 +13,10 @@ export const strawberries_from_score = (score, num_players) => {
 export const format_score_breakdown = (num_players) => {
   const scores = _SCORE_BRACKETS[num_players]
   return (
-    `    🍓\`${scores[0]}-${scores[1] - 1}\`\n` +
-    `   🍓🍓\`${scores[1]}-${scores[2] - 1}\`\n` +
-    `  🍓🍓🍓\`${scores[2]}-${scores[3] - 1}\`\n` +
-    ` 🍓🍓🍓🍓\`${scores[3]}-${scores[4] - 1}\`\n` +
-    `🍓🍓🍓🍓🍓\`${scores[4]}+\`\n`
+    `\`${scores[0]}-${scores[1] - 1}\`  🍓\n` +
+    `\`${scores[1]}-${scores[2] - 1}\`  🍓🍓\n` +
+    `\`${scores[2]}-${scores[3] - 1}\`  🍓🍓🍓\n` +
+    `\`${scores[3]}-${scores[4] - 1}\`  🍓🍓🍓🍓\n` +
+    `\`${scores[4]}+\`    🍓🍓🍓🍓🍓\n`
   )
 }

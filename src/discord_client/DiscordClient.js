@@ -43,7 +43,6 @@ class DiscordClient {
     this._games = {}
     this._users = {}
     this._cmds = this._make_commands()
-    this._game_cmds = {}
 
     this._mutex = new Mutex()
   }
@@ -237,47 +236,41 @@ class DiscordClient {
       console.log(`\nReceived msg from [${author_name}] at [${guild_name}: ${channel_name}]`)
       console.log(cmd_line_args)
 
-      // if (['help', 'h'].includes(args["_"][0])) {
-      //   let help_msg = `${cyan_block('Server Commands')}\n${help_str(this.prefix)}`
-      //   if (this._users[msg.author.id] !== undefined) {
-      //     console.log(this._users[msg.author.id])
-      //     const game_id = this._users[msg.author.id].game_id
-      //     help_msg = `${help_msg}\n${cyan_block('Game Specific Commands')}\n${await this._games[game_id].game.help(msg.author.id)}`
-      //   }
-      //   return log_and_reply(msg, help_msg)
-      // }
+      if (['help', 'h'].includes(cmd_line_args["_"][0].toLowerCase())) {
+        const server_cmds_help = `${cyan_block('Server Commands')}${code_block(this._cmds.help().join("\n"))}`
+        let game_cmds_help = `${cyan_block('Game Specific Commands')}${code_block(`You aren't in any game`)}`
+        if (this._users[msg.author.id] !== undefined) {
+          const game_id = this._users[msg.author.id].game_id
+          game_cmds_help = `${cyan_block('Game Specific Commands')}${code_block(this._games[game_id].commands.help().join("\n"))}`
+        }
+        return log_and_reply(msg, `${server_cmds_help}\n${game_cmds_help}`)
+      }
 
-      const { success, reply_msg, dm_msg } = await this._cmds.call({ cmd_line_args: cmd_line_args, discord_user: msg.author })
-      console.log(`Result: ${success}`)
+      if (this._cmds.exists(cmd_line_args["_"][0])) {
+        const { success, reply_msg, dm_msg } = await this._cmds.call({ cmd_line_args: cmd_line_args, discord_user: msg.author })
+        console.log(`Result: ${success}`)
+        reply_msg != null && msg.reply(reply_msg)
+        dm_msg != null && msg.author.send(dm_msg)
+        return
+      }
+
+      if (this._users[msg.author.id] === undefined && !cmd_line_args.game) {
+        return log_and_reply(msg, `You aren't part of any game, so to make game specific commands, use \`--game\` flag with \`<game id>\``)
+      }
+
+      const game_id = this._users[msg.author.id]?.game_id ?? cmd_line_args.game_id
+      if (this._games[game_id] === undefined) {
+        return log_and_reply(msg, `The game id \`${game_id} doesn't correspond to any existing game.\``)
+      }
+
+      const { success, reply_msg, dm_msg } = await this._games[game_id].call({
+        discord_user: msg.author,
+        cmd_line_args: cmd_line_args
+      })
+
+      console.log(`reply_msg: ${reply_msg}`)
       reply_msg != null && msg.reply(reply_msg)
       dm_msg != null && msg.author.send(dm_msg)
-
-      // if (this._cmds[args["_"][0]] !== undefined) {
-      //   const temp = await this._cmds[args["_"][0]](msg, args)
-      //   console.log(temp)
-      //   const { success, reply_msg, dm_msg, ...rest } = temp // await this._cmds[args["_"][0]](msg, args)
-      //   reply_msg != null && msg.reply(reply_msg)
-      //   dm_msg != null && msg.author.send(dm_msg)
-      //   return
-      // }
-
-      // if (this._users[msg.author.id] === undefined && !args.game) {
-      //   return log_and_reply(msg, `You aren't part of any game, so to make game specific commands, use \`--game\` flag with \`<game id>\``)
-      // }
-
-      // const game_id = this._users[msg.author.id]?.game_id ?? args.game_id
-      // if (this._games[game_id] === undefined) {
-      //   return log_and_reply(msg, `The game id \`${game_id} doesn't correspond to any existing game.\``)
-      // }
-
-      // const { success, reply_msg, dm_msg } = await this._games[game_id].call({
-      //   discord_user: msg.author,
-      //   args: args
-      // })
-
-      // console.log(`reply_msg: ${reply_msg}`)
-      // reply_msg != null && msg.reply(reply_msg)
-      // dm_msg != null && msg.author.send(dm_msg)
     } catch (e) {
       log_and_reply(msg, `Caught exception while processing message: \n\n${code_block(e.stack)}\``)
     }

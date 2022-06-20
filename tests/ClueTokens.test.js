@@ -1,20 +1,20 @@
-import { Clues } from "../src/strawberry_jam/Clues.js"
+import { ClueTokens } from "../src/strawberry_jam/ClueTokens.js"
 
 describe('Clues Tests', () => {
   test.each([4, 5, 6])("Clues Construct for %j", (val) => {
-    let clues = new Clues(val)
+    let clues = new ClueTokens(val)
     expect(clues.remaining()).toBe(10)
     expect(clues.locked()).toBe(1)
   })
 
   test.each([1, 2, 3])("Clues Construct for %j", (val) => {
-    let clues = new Clues(val)
+    let clues = new ClueTokens(val)
     expect(clues.remaining()).toBe(8)
     expect(clues.locked()).toBe(3)
   })
 
   test.each([1, 2, 3, 4, 5, 6])("Clues Update", (val) => {
-    let clues = new Clues(val)
+    let clues = new ClueTokens(val)
     clues.update(Array(val).fill(0))
     expect(clues.locked()).toBe(val <= 3 ? 3 : 1)
 
@@ -26,7 +26,7 @@ describe('Clues Tests', () => {
   })
 
   test("Clues Incr, Decr", () => {
-    let clues = new Clues(6)
+    let clues = new ClueTokens(6)
 
     const remaining_before = clues.remaining()
     clues.increment(4)

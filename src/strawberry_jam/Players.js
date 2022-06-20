@@ -71,23 +71,17 @@ export class Players {
       return make_ret(false, `You can't vote if you're not in the game`)
     }
 
-    const vote_indices = votes.toString().split(',')
-    if (vote_indices.length !== [...new Set(vote_indices)].length) {
-      return make_ret(false, `You can't have duplicate indices for your votes`)
-    }
-
-    const votes_int = vote_indices.map(v => parseInt(v))
-    if (votes_int.some(v => isNaN(v))) {
-      return make_ret(false, `Your votes must be integers`)
-    }
-
-    if (votes_int.some(v => v < 1 || v > this.num())) {
+    if (votes.some(v => v > this.num())) {
       return make_ret(false, `Your indices must correspond to player nums, ie they must be between \`1\` and \`${this.num()}\``)
     }
 
-    player.votes = votes_int
-    const names = votes_int.map(num => [...this._players].find(([id, p]) => p.num === num).name)
-    console.log(names)
+    const dupes = votes.filter((v, ii) => votes.indexOf(v) !== ii)
+    if (dupes.length > 0) {
+      return make_ret(false, `Your indices cannot have duplicates, The follow were repeated: \`${dupes}\``)
+    }
+
+    player.votes = votes
+    const names = votes.map(num => [...this._players].find(([id, p]) => p.num === num)[1].name)
     return make_ret(true, null, null, { yes_vote_names: names })
   }
 
@@ -208,9 +202,6 @@ export class Players {
       }, 0)
       const vote_fraction = `(${(votes / this.num() * 100).toFixed(1)}%)`
 
-      console.log(`player: ${player.name}`)
-      console.log(`votes: ${votes}`)
-      console.log(`voted: ${voted}`)
       if (votes / this.num() > 0.5) {
         correct_words = correct_words + 1
         bonus_letters = bonus_letters + player.final_guess.length - player.length_of_words
@@ -218,11 +209,9 @@ export class Players {
       ret = `${ret}\n${index} ${name}${name_spacer}${unshuffled} ${assigned} / ${guess} / ${vote_fraction} / ${voted}`
     }
 
-    console.log(`correct_words: ${correct_words}`)
-    console.log(`bonus_letters: ${bonus_letters}`)
     const score = correct_words * [...this._players][0][1].length_of_words * 3 + bonus_letters * 1
     const score_chart = format_score_breakdown(this.num())
 
-    return `_ _\n\nFinal Results\n\n\`\`\`Score: ${strawberries_from_score(score, this.num())}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
+    return `_ _\n\nFinal Results\n\n\`\`\`Score: (${score}) ${strawberries_from_score(score, this.num())}\n${ret}\`\`\`\n\nScore Chart:\n${score_chart}`
   }
 }

@@ -9,6 +9,10 @@ describe('Player Tests', () => {
   test("Player Construct", () => {
     const discord_user = new DiscordUserMock()
     const length_of_words = 5
+
+    expect(() => new Player({ discord_user })).toThrowError()
+    expect(() => new Player({ length_of_words })).toThrowError()
+
     let player = new Player({ discord_user, length_of_words })
 
     expect(player.state).toBe(PLAYER_STATE.CHOOSING_WORD)
@@ -243,23 +247,13 @@ describe('Player Tests', () => {
     }
 
     const bonus_cards = new BonusCards()
-    {
-      const { success } = player.make_final_guess('1,2,3,4', bonus_cards)
-      expect(success).toBe(false)
-    }
+    expect(player.make_final_guess(['1', '2', '3', '4'], bonus_cards).success).toBe(false) // missing index 5
+    expect(player.make_final_guess(['1', '2', '3', '4', '6'], bonus_cards).success).toBe(false) // index 6 is invalid
+    expect(player.make_final_guess(['1', '1', '2', '3', '4'], bonus_cards).success).toBe(false) // duplicate index 1
+    expect(player.make_final_guess(['1', '5', '2', '3', '4', 'b7'], bonus_cards).success).toBe(false) // there is no bonus cards
 
     {
-      const { success } = player.make_final_guess('1,2,3,4,6', bonus_cards)
-      expect(success).toBe(false)
-    }
-
-    {
-      const { success } = player.make_final_guess('1,1,2,3,4', bonus_cards)
-      expect(success).toBe(false)
-    }
-
-    {
-      const { success } = player.make_final_guess('1,3,2,4,0', bonus_cards)
+      const { success } = player.make_final_guess(['1', '3', '2', '4', '0'], bonus_cards)
       expect(success).toBe(true)
       expect(bonus_cards.wild_user().id).toStrictEqual(discord_user.id)
       const word = player.assigned_word.split("")
@@ -269,7 +263,7 @@ describe('Player Tests', () => {
     bonus_cards.add('a')
 
     {
-      const { success, ...rest } = player.make_final_guess('1,2,3,4,b7', bonus_cards)
+      const { success, ...rest } = player.make_final_guess(['1', '2', '3', '4', 'b7'], bonus_cards)
       expect(success).toBe(true)
       expect(bonus_cards.wild_user()).toBe(null)
       expect(bonus_cards.users()[0].id).toStrictEqual(discord_user.id)

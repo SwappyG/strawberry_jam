@@ -31,6 +31,13 @@ export class Player {
     this.votes = null
 
     this.state = PLAYER_STATE.CHOOSING_WORD
+
+    if (![3, 4, 5, 6, 7].includes(length_of_words)) {
+      throw new Error(`Player Constructor - length_of_words must be in range [4,7]`)
+    }
+    if (this.discord_user == null) {
+      throw new Error(`Player Constructor - discord_user was ${this.discord_user}`)
+    }
   }
 
   send = (text) => {
@@ -42,9 +49,9 @@ export class Player {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. A player is trying to set a word after game has started`)
     }
 
-    if (typeof word !== 'string' || !is_letters(word)) {
-      return make_ret(false, `Your word should be made of letters only`)
-    }
+    // if (typeof word !== 'string' || !is_letters(word) || ['j', 'q', 'x', 'v', 'z'].some(badchar => word. .includes(badchar))) {
+    //   throw new Error(`Got improper arg passed to Player.set_word_from_deck. ${word}`)
+    // }
 
     if (word.length !== this.length_of_words) {
       return make_ret(false, `Your word should must be \`${this.length_of_words}\` characters long`)
@@ -82,6 +89,9 @@ export class Player {
   }
 
   get_active_letter = () => {
+    if (this.state === PLAYER_STATE.CHOOSING_WORD) {
+      return null
+    }
     return [this.on_bonus_letter ? this.bonus_letter : this.assigned_word[this.letter_index], this.letter_index]
   }
 
@@ -117,7 +127,7 @@ export class Player {
       for (const hint of hints) {
         hint_text = `${hint_text}\n - \`${hint.toUpperCase()}\``
       }
-      hint_text = `${hint_text}\nYour guess: \`[${this.guesses[letter_index]}]\``
+      hint_text = `${hint_text}\nYour guess: \`[${this.guesses[letter_index].toUpperCase()}]\``
     }
     if (this.state === PLAYER_STATE.RESPONDING_TO_HINT) {
       hint_text = `${hint_text}\nThe latest hint is waiting for your response`
@@ -154,10 +164,7 @@ export class Player {
       return make_ret(false, `You have no remaining letters, guess your bonus letter instead`)
     }
 
-    if (typeof guess_letter !== 'string' || guess_letter.length != 1 || !is_letters(guess_letter)) {
-      return make_ret(false, `Your guess must be a single valid letter`)
-    }
-    this.guesses[this.letter_index] = guess_letter.toLowerCase()
+    this.guesses[this.letter_index] = guess_letter
     this.letter_index = this.letter_index + 1
 
     if (this.letter_index === this.length_of_words) {
@@ -197,10 +204,6 @@ export class Player {
       return make_ret(false, `You are not on your bonus letters, pass or advance instead`)
     }
 
-    if ((typeof letter !== 'string') || (letter.length != 1) || (!is_letters(letter))) {
-      return make_ret(false, `Your bonus letter guess must be a single valid letter`)
-    }
-
     // regardless of correct guess or not, we change bonus letters
     const prev_bonus_letter = this.bonus_letter
     deck.discard(this.bonus_letter)
@@ -209,19 +212,20 @@ export class Player {
 
     this.state = PLAYER_STATE.READY
 
-    return make_ret(true, null, null, { correct: letter.toLowerCase() === prev_bonus_letter })
+    return make_ret(true, null, null, { correct: letter === prev_bonus_letter })
   }
 
-  make_final_guess = (indices_str, bonus_cards) => {
+  make_final_guess = (indices, bonus_cards) => {
     if (!this.is_ready()) {
       throw new Error(`The state machine has entered a weird PLAYER_STATE. ${this.name} tried to make a final guess while not READY`)
     }
 
     const is_bonus = (e) => e[0].toLowerCase() === 'b'
-    const entries = indices_str.toString().split(',').map((e) => {
+    const entries = indices.map((e) => {
       return is_bonus(e) ? [parseInt(e.slice(1)), true] : [parseInt(e), false]
     })
 
+    console.log(entries, bonus_cards.num())
     if (entries.some(([e, is_bonus]) => {
       return isNaN(e) ||
         (!is_bonus && (e < 0 || e > this.length_of_words)) ||
@@ -242,8 +246,6 @@ export class Player {
     }
 
     const wild_used = entries.some(([e, is_bonus]) => e === 0)
-    console.log(non_bonus_indices)
-    console.log(this.length_of_words)
     if (wild_used && (non_bonus_indices.length !== this.length_of_words - 1)) {
       return make_ret(false, `If you use a wild card \`[*]\`, then it must *replace* one of your original letters`)
     }
