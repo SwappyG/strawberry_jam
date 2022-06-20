@@ -12,7 +12,7 @@ const App = () => {
   const app = express()
   const port = process.env.PORT || 5000
 
-  app.get('/', (req, res) => res.send(`SwappyJam Discord Bot`))
+  app.get('/', (req, res) => res.send(`SwappyJam Discord Bot is awake, DM the bot on discord to get started`))
   app.listen(port, () => console.log(`Listening on ${port}`))
 
   const letter_jam = new DiscordClient({
