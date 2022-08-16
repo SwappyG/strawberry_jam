@@ -46,8 +46,9 @@ export class GameData {
 
   end_game = async (reason) => {
     if (reason) {
-      console.log(await this.game.get_users())
-      this.error_callback(reason, await this.game.get_users())
+      users = await this.game.get_users()
+      console.log(users)
+      this.error_callback(reason, users)
       this.game.msg_everyone(reason)
     }
     clearInterval(this.watchdog)

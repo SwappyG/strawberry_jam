@@ -4,8 +4,7 @@ import minimist from 'minimist';
 
 import { Constants, Client } from 'discord.js'
 
-import { is_alphanumeric, random_str } from "../utils/String.js"
-import { help_str } from './Help.js';
+import { random_str } from "../utils/String.js"
 import { GameData } from './Game.js';
 import { Mutex } from 'async-mutex';
 
@@ -13,7 +12,6 @@ import { log_and_reply } from '../utils/DiscordMsg.js';
 import { cyan_block, code_block } from '../utils/DiscordFormat.js';
 import { make_ret } from '../utils/Return.js';
 import { Commands } from '../utils/Commands.js';
-import { Arg } from '../utils/Arg.js';
 import { make_exit_game_command, make_join_game_command, make_new_game_command, make_kill_game_command, make_server_lobby_command } from './DiscordClientCommands.js';
 
 
@@ -106,8 +104,7 @@ class DiscordClient {
         return make_ret(false, `Only the creator of the game can kill it`)
       }
 
-      this._games[game_id].end_game(`The game was killed by ${discord_user.username}`)
-      delete this._games[game_id]
+      await this._games[game_id].end_game(`The game was killed by ${discord_user.username}`)
       return make_ret(true)
     })
 

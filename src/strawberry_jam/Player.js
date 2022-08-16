@@ -127,7 +127,7 @@ export class Player {
       for (const hint of hints) {
         hint_text = `${hint_text}\n - \`${hint.toUpperCase()}\``
       }
-      hint_text = `${hint_text}\nYour guess: \`[${this.guesses[letter_index].toUpperCase()}]\``
+      hint_text = `${hint_text}\nYour guess: \`[${this.guesses[letter_index]?.toUpperCase()}]\``
     }
     if (this.state === PLAYER_STATE.RESPONDING_TO_HINT) {
       hint_text = `${hint_text}\nThe latest hint is waiting for your response`
